@@ -1,0 +1,29 @@
+# CPU-only environment for the offline correctness gate.
+#
+# This lock runs `pytest -m 'not gpu and not download'`, the property tests, the
+# report-integrity tests, ruff, and mypy. It cannot satisfy a GPU gate: the
+# integration tests marked `gpu` skip here, and a skip is not a pass.
+#
+# torch is intentionally left unpinned here because the right wheel depends on
+# the platform. Install the CPU wheel for the
+# target platform first, for example:
+#
+#   python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   python -m pip install -r requirements-cpu.lock
+#
+# The CUDA and aarch64-specific distributions from requirements-spark.lock are
+# deliberately absent. Versions below match the Spark lock so the two
+# environments differ only in the torch build. Verified by the GitHub Actions
+# CPU job, not on the Spark.
+huggingface_hub==0.36.2
+hypothesis==6.168.0
+mypy==2.3.1
+numpy==2.5.3
+pytest==9.1.1
+regex==2026.9.10
+requests==2.34.2
+ruff==0.16.7
+safetensors==0.8.0
+tokenizers==0.22.2
+tqdm==4.70.1
+transformers==4.57.1
