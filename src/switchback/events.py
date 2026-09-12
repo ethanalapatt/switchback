@@ -95,6 +95,12 @@ class BlockEvent:
     draft_cache_after: int | None
     bypass_reason: str | None
     duration_ns: int
+    # True when this block ended the request on a committed EOS. Such a block
+    # may commit fewer than ``accepted + 1`` tokens, because the tentative
+    # suffix after the stop token is discarded, and its draft cache may be one
+    # position short because the catch-up call is deliberately skipped once
+    # termination is known (SPEC.md section 4.3 step 5).
+    terminal: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
