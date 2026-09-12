@@ -16,9 +16,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from switchback.decoder import EngineOptions, decode_target_only
 from switchback.models import hf_baselines
 from switchback.models.qwen import (
     LoadedModel,
+    QwenAdapter,
     check_logits_vocab_match,
     check_tokenizer_compatibility,
     load_qwen,
@@ -129,10 +131,12 @@ def run_pilot(
     prompts: tuple[str, ...] = PILOT_PROMPTS,
     seed: int = 42,
 ) -> tuple[list[PilotRequest], list[str]]:
-    """Run ``hf_ar`` and ``hf_dynamic`` over the pilot prompts.
+    """Run ``hf_ar``, ``native_ar`` and ``hf_dynamic`` over the pilot prompts.
 
-    Returns the measured requests plus any greedy output mismatches found
-    between the two baselines. A mismatch is recorded, never smoothed over.
+    ``native_ar`` is included so the pilot can detect the risk SPEC.md section 11
+    names first: Python-level overhead in Switchback's own loop dominating any
+    saving from drafting. Returns the measured requests plus any greedy output
+    mismatch against ``hf_ar``.
     """
     config = DecodeConfig(
         mode="greedy",
@@ -145,10 +149,42 @@ def run_pilot(
     pad_id = getattr(target.tokenizer, "pad_token_id", None)
     prompt_ids = [render_chat_prompt(target.tokenizer, text) for text in prompts]
 
+    adapter = QwenAdapter(
+        model=target.model,
+        device=device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    options = EngineOptions(correctness_checks=True, device=device)
+
+    def run_native(ids: list[int]) -> hf_baselines.BaselineResult:
+        """Adapt a DecodeResult to the baseline record so the columns line up."""
+        result = decode_target_only(adapter, ids, config, eos_ids, options=options)
+        return hf_baselines.BaselineResult(
+            engine="native_ar",
+            output_ids=result.output_ids,
+            token_release_ns=result.token_release_ns,
+            start_ns=result.start_ns,
+            first_token_ns=result.first_token_ns,
+            last_token_ns=result.last_token_ns,
+            end_ns=result.end_ns,
+            prompt_tokens=len(ids),
+            termination=result.termination,
+            generation_config={"engine": "switchback native target-only"},
+            counters={
+                "accepted": result.accepted,
+                "proposed": result.proposed,
+                "target_calls": result.target_calls,
+                "bypass_decisions": result.bypass_decisions,
+                "controller_decisions": result.controller_decisions,
+            },
+        )
+
     engines = {
         "hf_ar": lambda ids: hf_baselines.run_hf_ar(
             target.model, ids, config, eos_ids, pad_id, device
         ),
+        "native_ar": run_native,
         "hf_dynamic": lambda ids: hf_baselines.run_hf_dynamic(
             target.model, draft.model, ids, config, eos_ids, pad_id, device
         ),
@@ -186,10 +222,14 @@ def run_pilot(
                         peak_reserved_bytes=reserved,
                     )
                 )
+    # Greedy equality is required across all three engines before any timing
+    # comparison means anything (invariant I6). Mismatches are recorded, never
+    # smoothed over.
     mismatches = [
-        f"prompt {index}: hf_dynamic output differs from hf_ar"
+        f"prompt {index}: {engine} output differs from hf_ar"
         for index in range(len(prompt_ids))
-        if outputs.get((index, "hf_ar")) != outputs.get((index, "hf_dynamic"))
+        for engine in ("native_ar", "hf_dynamic")
+        if outputs.get((index, "hf_ar")) != outputs.get((index, engine))
     ]
     return measured, mismatches
 
