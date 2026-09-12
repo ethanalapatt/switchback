@@ -402,6 +402,193 @@ def command_evidence(args: argparse.Namespace) -> int:
     return 0 if document["passed"] else 1
 
 
+def command_calibrate(args: argparse.Namespace) -> int:
+    """Fit the controller's cost and acceptance tables from calibration prompts."""
+    from switchback.calibration import calibrate, format_profile, write_profile
+    from switchback.models.qwen import render_chat_prompt as _render
+    from switchback.pilot import PILOT_PROMPTS, load_pair
+
+    configure_torch_native_overrides()
+    deterministic_runtime()
+    manifest = load_manifest(args.manifest)
+    target_entry = manifest["models"]["target"]
+    draft_entry = manifest["models"]["draft"]
+    target, draft, _, _ = load_pair(
+        target_entry["repo_id"],
+        target_entry["revision"],
+        draft_entry["repo_id"],
+        draft_entry["revision"],
+        device=args.device,
+        dtype=args.dtype,
+        attn_implementation=args.attn,
+        local_files_only=args.local_files_only,
+    )
+    target_adapter = QwenAdapter(
+        model=target.model,
+        device=args.device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    draft_adapter = QwenAdapter(
+        model=draft.model,
+        device=args.device,
+        vocab_size=draft.logits_vocab_size,
+        name="draft",
+    )
+    prompts = [_render(target.tokenizer, text) for text in PILOT_PROMPTS]
+    profile, diagnostics = calibrate(
+        target_adapter,
+        draft_adapter,
+        prompts,
+        target.eos_token_ids,
+        max_new_tokens=args.max_new_tokens,
+        device=args.device,
+        gamma=args.gamma,
+        repeats=args.repeats,
+    )
+    digest = write_profile(profile, diagnostics, args.out, notes=args.notes)
+    print(format_profile(profile))
+    print()
+    print(f"  wrote {args.out}  (profile sha256 {digest[:16]}...)")
+    return 0
+
+
+def command_controller_check(args: argparse.Namespace) -> int:
+    """Run the controller against the fixed baselines on calibration prompts."""
+    from switchback.calibration import load_profile
+    from switchback.controller_check import format_check, run_check, summarize, write_check
+    from switchback.models.qwen import render_chat_prompt as _render
+    from switchback.pilot import PILOT_PROMPTS, load_pair
+
+    configure_torch_native_overrides()
+    deterministic_runtime()
+    profile = load_profile(args.calibration)
+    manifest = load_manifest(args.manifest)
+    target_entry = manifest["models"]["target"]
+    draft_entry = manifest["models"]["draft"]
+    target, draft, _, _ = load_pair(
+        target_entry["repo_id"],
+        target_entry["revision"],
+        draft_entry["repo_id"],
+        draft_entry["revision"],
+        device=args.device,
+        dtype=args.dtype,
+        attn_implementation=args.attn,
+        local_files_only=args.local_files_only,
+    )
+    target_adapter = QwenAdapter(
+        model=target.model,
+        device=args.device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    draft_adapter = QwenAdapter(
+        model=draft.model,
+        device=args.device,
+        vocab_size=draft.logits_vocab_size,
+        name="draft",
+    )
+    prompts = [_render(target.tokenizer, text) for text in PILOT_PROMPTS]
+    requests, mismatches = run_check(
+        target_adapter,
+        draft_adapter,
+        profile,
+        prompts,
+        target.eos_token_ids,
+        max_new_tokens=args.max_new_tokens,
+        device=args.device,
+        repeats=args.repeats,
+    )
+    summary = summarize(requests)
+    print(format_check(summary))
+    write_check(
+        args.out,
+        requests,
+        mismatches,
+        profile,
+        condition={
+            "mode": "greedy",
+            "eos_policy": "suppress_until_budget",
+            "max_new_tokens": args.max_new_tokens,
+            "repeats": args.repeats,
+            "prompts": len(prompts),
+            "in_sample": True,
+        },
+        notes=args.notes,
+    )
+    if mismatches:
+        print("  GREEDY OUTPUT MISMATCH:", file=sys.stderr)
+        for line in mismatches:
+            print(f"    {line}", file=sys.stderr)
+    print(f"  wrote {args.out}")
+    return 1 if mismatches else 0
+
+
+def command_conformance(args: argparse.Namespace) -> int:
+    """Measure where greedy speculation stops matching target-only decoding."""
+    from switchback.conformance import check_prompt, format_conformance, write_conformance
+    from switchback.models.qwen import render_chat_prompt as _render
+    from switchback.pilot import PILOT_PROMPTS, load_pair
+
+    configure_torch_native_overrides()
+    deterministic_runtime()
+    manifest = load_manifest(args.manifest)
+    target_entry = manifest["models"]["target"]
+    draft_entry = manifest["models"]["draft"]
+    target, draft, _, _ = load_pair(
+        target_entry["repo_id"],
+        target_entry["revision"],
+        draft_entry["repo_id"],
+        draft_entry["revision"],
+        device=args.device,
+        dtype=args.dtype,
+        attn_implementation=args.attn,
+        local_files_only=args.local_files_only,
+    )
+    target_adapter = QwenAdapter(
+        model=target.model,
+        device=args.device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    draft_adapter = QwenAdapter(
+        model=draft.model,
+        device=args.device,
+        vocab_size=draft.logits_vocab_size,
+        name="draft",
+    )
+    prompts = [_render(target.tokenizer, text) for text in PILOT_PROMPTS]
+    cases = []
+    for length in args.lengths:
+        for index, prompt in enumerate(prompts):
+            cases.extend(
+                check_prompt(
+                    target_adapter,
+                    draft_adapter,
+                    prompt,
+                    index,
+                    target.eos_token_ids,
+                    max_new_tokens=length,
+                    device=args.device,
+                )
+            )
+    print(format_conformance(cases))
+    write_conformance(
+        args.out,
+        cases,
+        condition={
+            "dtype": args.dtype,
+            "attn_implementation": args.attn,
+            "lengths": list(args.lengths),
+            "prompts": len(prompts),
+            "gammas": [1, 2, 4, 8],
+        },
+        notes=args.notes,
+    )
+    print(f"  wrote {args.out}")
+    return 0
+
+
 def command_demo(args: argparse.Namespace) -> int:
     """Offline fixture check: builds the tiny model twice and compares logits."""
     import torch
@@ -531,6 +718,50 @@ def build_parser() -> argparse.ArgumentParser:
     evidence.add_argument("--notes", default="")
     evidence.add_argument("--out", type=Path, default=Path("artifacts/evidence.json"))
     evidence.set_defaults(handler=command_evidence)
+
+    calibrate = subparsers.add_parser(
+        "calibrate", help="fit the controller cost tables from calibration prompts"
+    )
+    calibrate.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    calibrate.add_argument("--device", default="cuda")
+    calibrate.add_argument("--dtype", default="bfloat16")
+    calibrate.add_argument("--attn", default="sdpa")
+    calibrate.add_argument("--local-files-only", action="store_true")
+    calibrate.add_argument("--max-new-tokens", type=int, default=96)
+    calibrate.add_argument("--gamma", type=int, default=8)
+    calibrate.add_argument("--repeats", type=int, default=2)
+    calibrate.add_argument("--notes", default="")
+    calibrate.add_argument("--out", type=Path, default=Path("artifacts/calibration.json"))
+    calibrate.set_defaults(handler=command_calibrate)
+
+    check = subparsers.add_parser(
+        "controller-check",
+        help="run the controller against fixed baselines on calibration prompts",
+    )
+    check.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    check.add_argument("--calibration", type=Path, default=Path("artifacts/calibration.json"))
+    check.add_argument("--device", default="cuda")
+    check.add_argument("--dtype", default="bfloat16")
+    check.add_argument("--attn", default="sdpa")
+    check.add_argument("--local-files-only", action="store_true")
+    check.add_argument("--max-new-tokens", type=int, default=96)
+    check.add_argument("--repeats", type=int, default=3)
+    check.add_argument("--notes", default="")
+    check.add_argument("--out", type=Path, default=Path("artifacts/controller_check.json"))
+    check.set_defaults(handler=command_controller_check)
+
+    conformance = subparsers.add_parser(
+        "conformance", help="measure where greedy speculation diverges from target-only"
+    )
+    conformance.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    conformance.add_argument("--device", default="cuda")
+    conformance.add_argument("--dtype", default="bfloat16")
+    conformance.add_argument("--attn", default="sdpa")
+    conformance.add_argument("--local-files-only", action="store_true")
+    conformance.add_argument("--lengths", type=int, nargs="+", default=[32, 64, 128, 256])
+    conformance.add_argument("--notes", default="")
+    conformance.add_argument("--out", type=Path, default=Path("artifacts/conformance.json"))
+    conformance.set_defaults(handler=command_conformance)
 
     demo = subparsers.add_parser("demo", help="offline tiny-model fixture check")
     demo.add_argument("--seed", type=int, default=1234)
