@@ -187,6 +187,22 @@ def profile_single_forward(
     adapter.checks = False
     prompt = [int(value) for value in prompt_ids]
     results: dict[str, Any] = {}
+
+    # One global warmup before the width loop. Without it the first width
+    # measured also pays the one-time allocator and kernel setup, which made
+    # width 1 read slower than width 2 and would bias the controller toward
+    # drafting by inflating the target-only cost it compares against.
+    with torch.inference_mode():
+        warm = adapter.new_cache()
+        adapter.forward(torch.tensor([prompt], dtype=torch.long, device=device), warm)
+        base_warm = adapter.cache_length(warm)
+        for _ in range(warmups):
+            adapter.forward(
+                torch.tensor([[1] * max(widths)], dtype=torch.long, device=device), warm
+            )
+            adapter.crop(warm, base_warm)
+    _sync(device)
+
     for width in widths:
         cache = adapter.new_cache()
         with torch.inference_mode():
