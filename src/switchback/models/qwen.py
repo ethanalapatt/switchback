@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from switchback.cache import CacheHandle
 from switchback.types import (
     MAX_CONTEXT_TOKENS,
     ConfigError,
@@ -366,3 +367,87 @@ def render_chat_prompt(tokenizer: Any, instruction: str) -> list[int]:
     )
     ids = tokenizer.encode(text, add_special_tokens=False)
     return [int(value) for value in ids]
+
+
+@dataclass
+class QwenAdapter:
+    """The only place Transformers' forward and cache APIs are called.
+
+    Also drives the tiny CPU fixture, which is a real ``Qwen3ForCausalLM``, so
+    the offline tests exercise this exact code path rather than a stand-in.
+
+    Tensor axes: ``ids`` is ``[1, T]``, the returned logits are ``[1, T, V]``.
+    Row ``i`` of the logits predicts the token that follows ``ids[0, i]``, which
+    is what makes speculative verification a single forward call.
+    """
+
+    model: Any
+    device: str
+    vocab_size: int
+    name: str = "target"
+    checks: bool = True
+
+    def new_cache(self) -> CacheHandle:
+        """Allocate an empty cache and its ledger."""
+        from transformers import DynamicCache
+
+        return CacheHandle(name=self.name, backend=DynamicCache(), tokens=[], checks=self.checks)
+
+    def backend_length(self, cache: CacheHandle) -> int | None:
+        """Positions the Transformers cache itself reports, or None if empty."""
+        backend = cache.backend
+        if backend is None:
+            return None
+        try:
+            return int(backend.get_seq_length())
+        except (AttributeError, IndexError):  # pragma: no cover - empty cache
+            return None
+
+    def forward(self, ids: Any, cache: CacheHandle) -> Any:
+        """Append ``T`` positions to ``cache`` and return logits ``[1, T, V]``.
+
+        ``position_ids`` and ``cache_position`` are passed explicitly rather
+        than inferred. Transformers can derive them from the attention mask, but
+        that derivation is exactly what a speculative rollback invalidates: after
+        a crop the cache is shorter than the tokens the request has committed,
+        and an inferred position would silently offset the rotary embedding.
+        """
+        import torch
+
+        if ids.dim() != 2 or ids.shape[0] != 1:
+            raise ConfigError(f"expected ids of shape [1, T], got {tuple(ids.shape)}")
+        width = int(ids.shape[1])
+        if width == 0:
+            raise ConfigError("forward requires at least one token")
+        past = cache.length
+        # The context bound is checked first: it is a fact about the request,
+        # so a caller that asks for too much should hear that rather than an
+        # internal consistency message.
+        if past + width > MAX_CONTEXT_TOKENS:
+            raise ConfigError(
+                f"{self.name}: {past} cached + {width} new positions exceeds the "
+                f"{MAX_CONTEXT_TOKENS}-token context bound"
+            )
+        cache.assert_backend_agrees(self.backend_length(cache))
+        positions = torch.arange(past, past + width, device=ids.device, dtype=torch.long)
+        outputs = self.model(
+            input_ids=ids,
+            past_key_values=cache.backend,
+            attention_mask=torch.ones((1, past + width), dtype=torch.long, device=ids.device),
+            position_ids=positions.unsqueeze(0),
+            cache_position=positions,
+            use_cache=True,
+        )
+        cache.extend(ids[0].tolist())
+        cache.assert_backend_agrees(self.backend_length(cache))
+        return outputs.logits
+
+    def crop(self, cache: CacheHandle, length: int) -> None:
+        """Roll the cache back to ``length`` positions. Never copies the cache."""
+        cache.crop_to(length)
+        if cache.backend is not None:
+            cache.backend.crop(length)
+        cache.assert_backend_agrees(self.backend_length(cache))
+
+    def cache_length(self, cache: CacheHandle) -> int:
+        return cache.length
