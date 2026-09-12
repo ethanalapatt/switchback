@@ -4,7 +4,7 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 through 6 are complete. The execution machine is the DGX Spark itself
+Milestones 1 through 6 are complete. Milestone 7 is in progress. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
@@ -31,24 +31,27 @@ consequence for M7 recorded in ADR 0004. No benchmark has run.
 | M4 Fixed greedy speculation | **Complete** | 21 GPU tests, 82 forced-path tests, `artifacts/profile/m4_profile.json` |
 | M5 Sampled speculation and traces | **Complete** | 11 GPU tests, exact oracle agreement, `artifacts/traces/`, `artifacts/evidence.json` |
 | M6 Cost controller | **Complete** | 65 controller/adaptive tests, `artifacts/calibration.json`, `artifacts/controller_check.json`, `artifacts/conformance.json` |
-| M7 Benchmark and report | Not started | Renderer starter file only |
+| M7 Benchmark and report | **In progress** | Harness complete and proven end to end by `artifacts/runs/smoke`. The primary matrix has **not** run. |
 | M8 Reviewer demo | Not started | None |
 
 ## Next action
 
-Begin M7 by **resolving ADR 0004 first**, before any benchmark runs. The report
-renderer refuses any cell where greedy outputs differ, and at the primary
-condition of 256 fixed-length greedy tokens that will refuse roughly a quarter
-of cells. Option A in ADR 0004 -- report conformance as a measured per-cell rate
-and let the renderer proceed only when every divergence is a near-tie under a
-recorded bound -- is the recommendation, and it needs its own ADR and its own
-tests in `tests/report/`.
+**Run the primary matrix.** Everything it needs is built, committed and proven
+by the smoke run. The command is:
 
-Then implement `bench/prepare.py` (locked MBPP and GSM8K selection by SHA-256
-ordering, the controlled generator, `data/manifest.json` dataset entries),
-`bench/run.py` (manifest, warmups, randomized engine order, resumable chunks),
-and `bench/validate.py`. Calibration must move off the pilot prompts and onto
-the locked calibration split.
+```bash
+python -m bench.run --config configs/primary.toml --out artifacts/runs/primary
+```
+
+Estimated at **7.7 hours** on this machine (3,072 requests: 128 held-out
+prompts x 3 repeats x 8 engines at 256 tokens), derived from the smoke run's
+measured per-request times. It is resumable, so `--max-seconds` can cap one
+unattended stretch and rerunning the same command continues it. That is a real
+commitment of Ethan's GPU and is his call to start.
+
+After it completes: `bench.validate`, then `scripts/render_results.py ... --out
+RESULTS.md`, then the natural-stop and sampled cohorts. Calibration should also
+be refitted on the locked calibration split rather than the pilot prompts.
 
 ---
 
@@ -711,6 +714,124 @@ the locked calibration split.
     be unchanged to floating-point equality, while position 0's does move;
     `test_local_evidence_dominates_once_calibration_is_thin` shows the converse,
     so the test is not just asserting that nothing ever updates.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+
+---
+
+### M7: Locked benchmark and generated report
+
+- **Status:** in progress. The harness is complete and has produced a real
+  validated report end to end. The primary matrix has not run.
+
+- **Implementation and decisions:**
+  - **ADR 0005 resolved ADR 0004 first**, before any benchmark ran. The renderer
+    refused every greedy mismatch, which at 256 fixed-length tokens would have
+    refused about a quarter of cells and produced no report at all. A mismatch is
+    now admissible only with evidence that it was a near-tie, under a bound the
+    manifest declares; anything else is still refused with the original message.
+    A run that declares no bound keeps the old strict behaviour exactly.
+  - `bench/prepare.py` locks the workload. Rows are chosen by sorting the
+    SHA-256 of `revision + split + row_id`, never by content. Calibration and
+    held-out prompts come from different dataset splits. The workload file
+    stores prompt ids, token counts and token hashes, never prompt text.
+  - `bench/run.py` randomizes engine order inside each prompt/repeat block from
+    a recorded seed, resets peak-memory counters per request, records the
+    resident floor before any cache exists, keeps failed requests with their
+    error text, and resumes from `requests.jsonl`.
+  - Greedy divergences are measured **after** the timed region from an uncached
+    recomputation with the same EOS mask the engines used, and attached as the
+    evidence ADR 0005 requires.
+  - `bench/validate.py` adds what the renderer cannot check because it never
+    sees the inputs: that the config and workload still hash to what the run
+    recorded, and that the expected keys are exactly what they imply. Without
+    that last check a run could quietly narrow its own cohort and still report
+    `complete: true`.
+  - `pyarrow` rather than `datasets`: the revisions are already pinned here, so
+    only a parquet reader is needed, and the CPU gate never downloads a dataset.
+
+- **Commands actually run:**
+  ```
+  python -m bench.prepare  --config configs/smoke.toml
+  python -m bench.prepare  --config configs/primary.toml
+  python -m bench.prepare  --config configs/natural.toml
+  python -m switchback evidence --gpu --out artifacts/evidence.json
+  python -m bench.run      --config configs/smoke.toml --out artifacts/runs/smoke
+  python -m bench.validate artifacts/runs/smoke --config configs/smoke.toml
+  python scripts/render_results.py artifacts/runs/smoke --out artifacts/runs/smoke/report.md
+  python -m pytest tests/report -q
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 552 CPU tests and 54 GPU tests pass. ruff, format and mypy clean.
+  - 23 report-integrity tests, of which 13 are new and cover the near-tie
+    contract: the strict default, admission within the bound, a gap beyond it,
+    missing evidence, evidence pointing at the wrong position, evidence naming
+    the wrong tokens, an unusable gap, and a nonsense bound.
+  - The smoke run completed 64 of 64 expected requests with 0 errors, validated
+    clean, and rendered.
+  - **Failure found and fixed:** the `git_dirty` flag counted any tracked change,
+    including `artifacts/evidence.json`, which a benchmark rewrites as part of
+    running. Every measured run was therefore dirty and unrenderable. The flag
+    now covers `src`, `bench`, `scripts`, `configs`, `data` and
+    `pyproject.toml`; untracked source files are still caught by
+    `source_sha256`.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:** `artifacts/runs/smoke/` with its
+  `manifest.json`, `requests.jsonl`, `evidence.json` and generated `report.md`;
+  `artifacts/workloads/{smoke,primary,natural}.json`.
+
+  The smoke cohort is **preliminary by construction**: 8 held-out prompts, one
+  repeat, 32 tokens. It exists to prove the pipeline, not to support a latency
+  claim, and its cohort is named `smoke` so no table can be read as the primary
+  condition. What it does establish:
+
+  - The ADR 0005 contract does real work. 14 of 64 requests diverged from the
+    baseline's greedy tokens and **every one was a near-tie**: gaps of 0.0 to
+    0.25 logits, median 0.125. Several were exactly 0.0, two tokens with
+    identical recomputed FP32 logits that the two kernel paths tie-break
+    differently.
+  - `hf_dynamic` diverged too, on 3 of 8 prompts. Hugging Face's own assisted
+    generation has the same property, which is independent corroboration that
+    this is BF16 speculation rather than this implementation.
+
+- **Source commit:** recorded in each run manifest.
+
+- **Known limitations and blockers:**
+  - **The primary matrix has not run.** Estimated 7.7 hours for 3,072 requests,
+    derived from the smoke run's measured per-request times. No latency claim
+    exists and `RESULTS.md` does not exist.
+  - Calibration still uses the pilot prompts rather than the locked calibration
+    split. It must be refitted before the primary run is published.
+  - The natural-stop, sampled, stress and ablation cohorts have configs or
+    workloads but have not been run.
+  - The controlled-prompt cohort is generated but not yet wired into a config.
+  - `hf_ar` and `hf_dynamic` report null for acceptance and target-call
+    counters, because an external baseline does not expose them without extra
+    instrumentation that would land inside its own measured path.
+
+- **Next concrete step:** refit calibration on the locked calibration split,
+  then run `bench.run --config configs/primary.toml`.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* let the renderer admit a greedy mismatch when the run proves it
+    was a near-tie, instead of either refusing every mismatch or dropping the
+    check.
+  - *Alternative considered:* compare only the matching prefix and report the
+    median matched length. One line, and every cohort renders.
+  - *Failure mode:* that converts a measurable failure into an invisible one.
+    "The first 54 tokens matched" reads like a stronger claim than "75% of
+    requests matched exactly", and it is weaker. It would also silently absorb a
+    real bug: a cache off-by-one produces a divergence at a confident position,
+    and a prefix comparison reports that identically to a floating-point tie.
+  - *Evidence:* `test_a_gap_beyond_the_bound_is_refused` uses a 15.5-logit gap,
+    which is the number the first conformance measurement produced before its
+    own bug was fixed, and requires the renderer to refuse it;
+    `test_a_mismatch_without_evidence_is_refused` and
+    `test_evidence_pointing_at_the_wrong_position_is_refused` close the routes
+    by which a run could claim a near-tie it did not measure.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
