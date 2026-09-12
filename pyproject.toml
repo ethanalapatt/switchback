@@ -32,6 +32,12 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
 ]
+# Reading the locked dataset parquet files. Deliberately not `datasets`: the
+# revisions are pinned by this project, so all that is needed is a parquet
+# reader, and the CPU gate never downloads a dataset.
+bench = [
+    "pyarrow>=17",
+]
 
 [project.scripts]
 switchback = "switchback.cli:main"

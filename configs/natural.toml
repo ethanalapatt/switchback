@@ -1,0 +1,47 @@
+# Primary preset: the headline condition from SPEC.md section 9.3.
+#
+# 128 held-out real prompts, greedy, exactly 256 output tokens with EOS suppressed
+# identically in every engine, three repeats. This fixed-length condition is an
+# artificial latency benchmark and must be labelled as such wherever it appears.
+#
+schema_version = 1
+name = "natural"
+cohort = "natural_real"
+description = "Natural stopping. EOS respected, so output length varies."
+
+[models]
+target = "Qwen/Qwen3-4B"
+draft = "Qwen/Qwen3-0.6B"
+dtype = "bfloat16"
+device = "cuda"
+attn_implementation = "sdpa"
+
+[workload]
+code_calibration = 64
+code_heldout = 64
+math_calibration = 64
+math_heldout = 64
+controlled_calibration = 0
+controlled_heldout = 0
+controlled_seed_calibration = 17
+controlled_seed_heldout = 29
+
+[condition]
+name = "natural_stop_256"
+mode = "greedy"
+eos_policy = "respect"
+max_new_tokens = 256
+temperature = 1.0
+seeds = [42]
+repeats = 3
+
+[run]
+engines = ["hf_ar", "native_ar", "fixed_1", "fixed_2", "fixed_4", "fixed_8", "hf_dynamic", "adaptive"]
+baseline = "hf_ar"
+warmups = 2
+scheduling_seed = 2026
+# See docs/decisions/0005-renderer-near-tie-contract.md. Set above the BF16
+# reduction-order noise measured in milestone 3 (up to 1.13 absolute) would let
+# a real bug through; 0.5 is above every divergence observed (0.25) and well
+# below a confident disagreement.
+max_chosen_token_gap = 0.5

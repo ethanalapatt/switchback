@@ -1,0 +1,47 @@
+# Smoke preset: proves the pipeline end to end. Explicitly preliminary.
+#
+# Four real prompts per dataset at 32 output tokens with one repeat. This is
+# small enough to run in minutes and far too small to support any claim about
+# latency. SPEC.md section 9.3 labels smoke results preliminary; the renderer
+# reports whatever cohort it is given, so the cohort name says what it is.
+schema_version = 1
+name = "smoke"
+cohort = "smoke"
+description = "Preliminary pipeline check. Not a benchmark cohort."
+
+[models]
+target = "Qwen/Qwen3-4B"
+draft = "Qwen/Qwen3-0.6B"
+dtype = "bfloat16"
+device = "cuda"
+attn_implementation = "sdpa"
+
+[workload]
+code_calibration = 4
+code_heldout = 4
+math_calibration = 4
+math_heldout = 4
+controlled_calibration = 0
+controlled_heldout = 0
+controlled_seed_calibration = 17
+controlled_seed_heldout = 29
+
+[condition]
+name = "fixed_length_32"
+mode = "greedy"
+eos_policy = "suppress_until_budget"
+max_new_tokens = 32
+temperature = 1.0
+seeds = [42]
+repeats = 1
+
+[run]
+engines = ["hf_ar", "native_ar", "fixed_1", "fixed_2", "fixed_4", "fixed_8", "hf_dynamic", "adaptive"]
+baseline = "hf_ar"
+warmups = 2
+scheduling_seed = 2026
+# See docs/decisions/0005-renderer-near-tie-contract.md. Set above the BF16
+# reduction-order noise measured in milestone 3 (up to 1.13 absolute) would let
+# a real bug through; 0.5 is above every divergence observed (0.25) and well
+# below a confident disagreement.
+max_chosen_token_gap = 0.5
