@@ -18,6 +18,8 @@ from switchback.cache import CacheHandle, rollback_length
 from switchback.events import BlockEvent, Clock, EventSink, MonotonicClock, NullSink
 from switchback.models.qwen import QwenAdapter
 from switchback.sampling import (
+    CORRECTION_STREAM,
+    PROPOSAL_STREAM,
     BlockOutcome,
     RandomSource,
     TorchRandomSource,
@@ -140,8 +142,17 @@ def decode_target_only(
         released = clock.mark()
         state.committed.append(first)
         state.release_ns.append(released)
-        _emit(sink, state, "prefill", 0, cache, None, released - block_start)
         termination = "eos" if first in stop_ids else "budget"
+        _emit(
+            sink,
+            state,
+            "prefill",
+            0,
+            cache,
+            None,
+            released - block_start,
+            terminal=termination == "eos",
+        )
 
         while len(state.committed) < config.max_new_tokens and termination != "eos":
             block_start = clock.now_ns()
@@ -154,9 +165,18 @@ def decode_target_only(
             released = clock.mark()
             state.committed.append(token)
             state.release_ns.append(released)
-            _emit(sink, state, "target_only", 0, cache, None, released - block_start)
             if token in stop_ids:
                 termination = "eos"
+            _emit(
+                sink,
+                state,
+                "target_only",
+                0,
+                cache,
+                None,
+                released - block_start,
+                terminal=termination == "eos",
+            )
 
     end_ns = clock.mark()
     if options.correctness_checks:
@@ -209,6 +229,7 @@ def _emit(
     cache: CacheHandle,
     draft_cache: CacheHandle | None,
     duration_ns: int,
+    terminal: bool = False,
 ) -> None:
     sink.emit(
         BlockEvent(
@@ -226,6 +247,7 @@ def _emit(
             draft_cache_after=None if draft_cache is None else draft_cache.length,
             bypass_reason=None,
             duration_ns=duration_ns,
+            terminal=terminal,
         )
     )
     state.blocks += 1
@@ -335,8 +357,17 @@ def decode_speculative_greedy(
         released = clock.mark()
         state.committed.append(first)
         state.release_ns.append(released)
-        _emit(sink, state, "prefill", 0, target_cache, None, released - start_ns)
         termination = "eos" if first in stop_ids else "budget"
+        _emit(
+            sink,
+            state,
+            "prefill",
+            0,
+            target_cache,
+            None,
+            released - start_ns,
+            terminal=termination == "eos",
+        )
 
         while len(state.committed) < config.max_new_tokens and termination != "eos":
             block_start = clock.now_ns()
@@ -354,6 +385,8 @@ def decode_speculative_greedy(
                 released = clock.mark()
                 state.committed.append(token)
                 state.release_ns.append(released)
+                if token in stop_ids:
+                    termination = "eos"
                 _emit(
                     sink,
                     state,
@@ -362,9 +395,8 @@ def decode_speculative_greedy(
                     target_cache,
                     drafting.cache,
                     released - block_start,
+                    terminal=termination == "eos",
                 )
-                if token in stop_ids:
-                    termination = "eos"
                 continue
 
             width = min(gamma, remaining - 1)
@@ -409,10 +441,16 @@ def decode_speculative_greedy(
             keep = rollback_length(len(sequence), outcome.accepted)
             new_length = len(prompt) + len(state.committed) - 1
             if termination == "eos":
-                # The tentative suffix beyond the committed EOS is discarded and
-                # the caches are retired; nothing further reads them.
-                target.crop(target_cache, min(keep, target.cache_length(target_cache)))
-                drafting.cache.crop_to(min(new_length, draft.cache_length(drafting.cache)))
+                # The tentative suffix beyond the committed EOS is discarded, so
+                # this boundary is like any other: both caches end at S'[:-1].
+                # Cropping the target to `keep` instead left it one position too
+                # long whenever EOS truncated the block. That was found by the
+                # trace replay checker, not by any test that existed at the time.
+                # The draft may still be one short, because its catch-up call is
+                # skipped once termination is known; the block is flagged
+                # terminal so a replay can tell that apart from a bug.
+                target.crop(target_cache, min(new_length, target.cache_length(target_cache)))
+                draft.crop(drafting.cache, min(new_length, draft.cache_length(drafting.cache)))
             else:
                 target.crop(target_cache, keep)
                 if outcome.all_accepted:
@@ -440,6 +478,7 @@ def decode_speculative_greedy(
                 target_cache=target_cache,
                 draft_cache=drafting.cache,
                 duration_ns=released - block_start,
+                terminal=termination == "eos",
             )
 
     end_ns = clock.mark()
@@ -560,6 +599,7 @@ def _emit_block(
     target_cache: CacheHandle,
     draft_cache: CacheHandle,
     duration_ns: int,
+    terminal: bool = False,
 ) -> None:
     sink.emit(
         BlockEvent(
@@ -577,6 +617,283 @@ def _emit_block(
             draft_cache_after=draft_cache.length,
             bypass_reason=None,
             duration_ns=duration_ns,
+            terminal=terminal,
         )
     )
     state.blocks += 1
+
+
+class _ProposalRecorder:
+    """Thin observer that notes which tokens the proposal stream produced.
+
+    Exists so the GPU loop can run :func:`sampling.speculative_block` verbatim --
+    the same function the oracle enumerates exhaustively -- instead of a second
+    copy of the verification logic that would have to be trusted separately.
+
+    The target's row provider needs the full proposal list before it can issue
+    its single batched forward call. ``speculative_block`` draws every proposal
+    before it verifies any of them, which is exactly the one-batched-call
+    structure of the algorithm, so by the time the first row is requested this
+    recorder holds all of them. That ordering is asserted rather than assumed.
+    """
+
+    def __init__(self, inner: RandomSource) -> None:
+        self.inner = inner
+        self.proposals: list[int] = []
+
+    def categorical(self, weights: Any, stream: str) -> int:
+        value = self.inner.categorical(weights, stream)
+        if stream == PROPOSAL_STREAM:
+            self.proposals.append(value)
+        return value
+
+    def accept_ratio(self, numerator: float, denominator: float, stream: str) -> bool:
+        return self.inner.accept_ratio(numerator, denominator, stream)
+
+
+def decode_speculative_sampled(
+    target: QwenAdapter,
+    draft: QwenAdapter,
+    prompt_ids: Sequence[int],
+    config: DecodeConfig,
+    eos_token_ids: Sequence[int],
+    gamma: int,
+    request_id: str = "request",
+    run_id: str = "run",
+    source: RandomSource | None = None,
+    sink: EventSink | None = None,
+    clock: Clock | None = None,
+    options: EngineOptions | None = None,
+) -> DecodeResult:
+    """``fixed_g`` under temperature sampling, using the enumerated sampler.
+
+    Cache handling is identical to the greedy path. The difference is entirely
+    in how a candidate is chosen and accepted, and that part is delegated to
+    :func:`sampling.speculative_block` so the code exercised here is the code the
+    oracle checks in ``tests/unit/test_oracle.py``.
+
+    One deliberate asymmetry with the greedy path: a proposed stop token does
+    **not** end drafting early here. The greedy path stops because nothing after
+    a stop token could be committed; doing the same in sampled mode would mean
+    forking the enumerated function, and the only cost of not doing it is a few
+    wasted draft calls in a request that is about to end. It is recorded in the
+    counters so the M6 cost model sees the real number of draft calls.
+    """
+    import torch
+
+    from switchback.sampling import speculative_block
+
+    if gamma < 1:
+        raise ConfigError(f"speculative decoding requires gamma >= 1, got {gamma}")
+    if config.mode != "sample":
+        raise ConfigError("decode_speculative_sampled only implements sample mode")
+
+    options = options or EngineOptions()
+    sink = sink if sink is not None else NullSink()
+    clock = clock if clock is not None else MonotonicClock(device=options.device)
+    device = options.device
+    if source is None:
+        source = TorchRandomSource(request_seed=config.seed, device=device)
+
+    prompt = tuple(int(value) for value in prompt_ids)
+    _validate_request(prompt, config)
+    forbidden = forbidden_token_ids(config, eos_token_ids)
+    stop_ids = set() if forbidden else {int(value) for value in eos_token_ids}
+
+    state = RequestState(request_id=request_id, run_id=run_id, prompt_ids=prompt)
+    target.checks = options.correctness_checks
+    draft.checks = options.correctness_checks
+    target_cache = target.new_cache()
+    drafting = DraftState(adapter=draft, cache=draft.new_cache())
+    proposed_total = 0
+    accepted_total = 0
+
+    def probabilities(row: Any) -> Any:
+        return softmax_probabilities(row, config.temperature, forbidden_ids=forbidden)
+
+    start_ns = clock.mark()
+    with torch.inference_mode():
+        logits = target.forward(
+            torch.tensor([prompt], dtype=torch.long, device=device), target_cache
+        )
+        state.target_calls += 1
+        first = source.categorical(probabilities(logits[0, -1]), CORRECTION_STREAM)
+        released = clock.mark()
+        state.committed.append(first)
+        state.release_ns.append(released)
+        termination = "eos" if first in stop_ids else "budget"
+        _emit(
+            sink,
+            state,
+            "prefill",
+            0,
+            target_cache,
+            None,
+            released - start_ns,
+            terminal=termination == "eos",
+        )
+
+        while len(state.committed) < config.max_new_tokens and termination != "eos":
+            block_start = clock.now_ns()
+            sequence = state.sequence
+            target_cache.assert_boundary(sequence)
+            remaining = config.max_new_tokens - len(state.committed)
+
+            if remaining == 1:
+                pending = torch.tensor([[sequence[-1]]], dtype=torch.long, device=device)
+                row = target.forward(pending, target_cache)
+                state.target_calls += 1
+                token = source.categorical(probabilities(row[0, -1]), CORRECTION_STREAM)
+                released = clock.mark()
+                state.committed.append(token)
+                state.release_ns.append(released)
+                if token in stop_ids:
+                    termination = "eos"
+                _emit(
+                    sink,
+                    state,
+                    "target_only",
+                    0,
+                    target_cache,
+                    drafting.cache,
+                    released - block_start,
+                    terminal=termination == "eos",
+                )
+                continue
+
+            width = min(gamma, remaining - 1)
+            if not drafting.initialized:
+                draft.forward(
+                    torch.tensor([[*prompt]], dtype=torch.long, device=device), drafting.cache
+                )
+                state.draft_calls += 1
+                drafting.initialized = True
+
+            recorder = _ProposalRecorder(source)
+            base = tuple(sequence)
+            verification_rows: list[Any] = []
+
+            def draft_row(prefix: tuple[int, ...], _base: tuple[int, ...] = base) -> Any:
+                row = draft.forward(
+                    torch.tensor([[prefix[-1]]], dtype=torch.long, device=device), drafting.cache
+                )
+                state.draft_calls += 1
+                return probabilities(row[0, -1])
+
+            def target_row(
+                prefix: tuple[int, ...],
+                _base: tuple[int, ...] = base,
+                _width: int = width,
+                _rows: list[Any] = verification_rows,
+                _recorder: _ProposalRecorder = recorder,
+            ) -> Any:
+                if not _rows:
+                    if len(_recorder.proposals) != _width:
+                        raise AssertionError(
+                            f"verification began with {len(_recorder.proposals)} of "
+                            f"{_width} proposals drawn; the single batched target "
+                            f"call would be built from an incomplete block"
+                        )
+                    batched = torch.tensor(
+                        [[_base[-1], *_recorder.proposals]], dtype=torch.long, device=device
+                    )
+                    logits_rows = target.forward(batched, target_cache)
+                    state.target_calls += 1
+                    _rows.extend(
+                        probabilities(logits_rows[0, index]) for index in range(_width + 1)
+                    )
+                index = len(prefix) - len(_base)
+                if not 0 <= index <= _width:
+                    raise AssertionError(f"verification asked for row {index} of {_width + 1}")
+                return _rows[index]
+
+            outcome = speculative_block(base, width, target_row, draft_row, recorder)
+            proposals = list(outcome.proposed)
+            proposed_total += len(proposals)
+            accepted_total += outcome.accepted
+
+            committed = list(outcome.emitted)
+            budget_left = config.max_new_tokens - len(state.committed)
+            if len(committed) > budget_left:
+                raise AssertionError(
+                    f"block produced {len(committed)} tokens with {budget_left} of budget left"
+                )
+            stopped_at = _first_stop_index(committed, stop_ids)
+            if stopped_at is not None:
+                committed = committed[: stopped_at + 1]
+                termination = "eos"
+
+            released = clock.mark()
+            state.committed.extend(committed)
+            state.release_ns.extend([released] * len(committed))
+
+            keep = rollback_length(len(sequence), outcome.accepted)
+            new_length = len(prompt) + len(state.committed) - 1
+            if termination == "eos":
+                # The tentative suffix beyond the committed EOS is discarded, so
+                # this boundary is like any other: both caches end at S'[:-1].
+                # Cropping the target to `keep` instead left it one position too
+                # long whenever EOS truncated the block. That was found by the
+                # trace replay checker, not by any test that existed at the time.
+                # The draft may still be one short, because its catch-up call is
+                # skipped once termination is known; the block is flagged
+                # terminal so a replay can tell that apart from a bug.
+                target.crop(target_cache, min(new_length, target.cache_length(target_cache)))
+                draft.crop(drafting.cache, min(new_length, draft.cache_length(drafting.cache)))
+            else:
+                target.crop(target_cache, keep)
+                if outcome.all_accepted:
+                    draft.forward(
+                        torch.tensor([[proposals[-1]]], dtype=torch.long, device=device),
+                        drafting.cache,
+                    )
+                    state.draft_calls += 1
+                else:
+                    draft.crop(drafting.cache, keep)
+                target_cache.assert_boundary(state.sequence)
+                drafting.cache.assert_boundary(state.sequence)
+
+            _emit_block(
+                sink,
+                state,
+                gamma=width,
+                proposed=len(proposals),
+                accepted=outcome.accepted,
+                rejection_position=outcome.rejection_position,
+                committed=len(committed),
+                target_cache=target_cache,
+                draft_cache=drafting.cache,
+                duration_ns=released - block_start,
+                terminal=termination == "eos",
+            )
+
+    end_ns = clock.mark()
+    if options.correctness_checks:
+        _assert_termination(state, config, stop_ids, termination)
+
+    return DecodeResult(
+        run_id=run_id,
+        request_id=request_id,
+        output_ids=tuple(state.committed),
+        token_release_ns=tuple(state.release_ns),
+        termination=termination,  # type: ignore[arg-type]
+        start_ns=start_ns,
+        first_token_ns=state.release_ns[0],
+        last_token_ns=state.release_ns[-1],
+        end_ns=end_ns,
+        proposed=proposed_total,
+        accepted=accepted_total,
+        target_calls=state.target_calls,
+        draft_calls=state.draft_calls,
+        controller_decisions=0,
+        bypass_decisions=0,
+        counters={
+            "prompt_tokens": len(prompt),
+            "blocks": state.blocks,
+            "gamma": gamma,
+            "target_cache_length": target_cache.length,
+            "draft_cache_length": drafting.cache.length if drafting.initialized else None,
+            "draft_initialized": int(drafting.initialized),
+            "correctness_checks": int(options.correctness_checks),
+        },
+    )
