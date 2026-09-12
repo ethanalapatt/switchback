@@ -1,0 +1,150 @@
+{
+  "checks": [
+    {
+      "detail": "3.12.3 (require >= 3.11)",
+      "name": "python_version",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "2.14.0+cu130",
+      "name": "torch_importable",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "transformers==4.57.1",
+      "name": "package_transformers",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "tokenizers==0.22.2",
+      "name": "package_tokenizers",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "numpy==2.5.3",
+      "name": "package_numpy",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "safetensors==0.8.0",
+      "name": "package_safetensors",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "huggingface-hub==0.36.2",
+      "name": "package_huggingface_hub",
+      "required": true,
+      "status": "pass"
+    },
+    {
+      "detail": "NVIDIA GB10",
+      "name": "cuda_available",
+      "required": false,
+      "status": "pass"
+    },
+    {
+      "detail": "torch.cuda.is_bf16_supported()=True",
+      "name": "bf16_supported",
+      "required": false,
+      "status": "pass"
+    },
+    {
+      "detail": "121.7 GiB visible (require >= 24 GiB for the 4B/0.6B pair)",
+      "name": "device_memory",
+      "required": false,
+      "status": "pass"
+    },
+    {
+      "detail": "deregistered ['bmm']: CPython development headers absent (/usr/include/python3.12/Python.h); install python3-dev to restore the stock Triton routing",
+      "name": "torch_native_triton_overrides",
+      "required": false,
+      "status": "unavailable"
+    },
+    {
+      "detail": "torch.nn.functional.scaled_dot_product_attention",
+      "name": "attention_backend_sdpa",
+      "required": false,
+      "status": "pass"
+    }
+  ],
+  "driver": {
+    "available": true,
+    "cuda_version": null,
+    "driver_version": "580.142",
+    "gpu_name": "NVIDIA GB10",
+    "power_draw_w": 3.96,
+    "temperature_c": 40.0
+  },
+  "generated_at": "2026-09-12T09:02:44+00:00",
+  "gpu_ready": true,
+  "host": {
+    "cpu_count": 20,
+    "hostname": "gigi-spark",
+    "machine": "aarch64",
+    "processor": "aarch64",
+    "release": "6.17.0-1018-nvidia",
+    "system": "Linux"
+  },
+  "max_context_tokens": 4096,
+  "ok": true,
+  "packages": {
+    "huggingface-hub": "0.36.2",
+    "numpy": "2.5.3",
+    "safetensors": "0.8.0",
+    "tokenizers": "0.22.2",
+    "torch": "2.14.0+cu130",
+    "transformers": "4.57.1",
+    "triton": "3.8.0"
+  },
+  "python": {
+    "executable": "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+    "implementation": "CPython",
+    "version": "3.12.3"
+  },
+  "source": {
+    "commit": "9286bfc146c691a037b0d5a7fb13ae2474f033be",
+    "dirty": false,
+    "source_file_count": 14,
+    "source_sha256": "5e2d98636e307a7941e9c15ea51dd23e394f3d2a1e878750acbb3d363e85ce06"
+  },
+  "torch": {
+    "bf16_supported": true,
+    "cuda_available": true,
+    "cuda_build_version": "13.0",
+    "deterministic_knobs": {
+      "allow_tf32_cudnn": false,
+      "allow_tf32_matmul": false,
+      "cublas_workspace_config": ":4096:8",
+      "cudnn_benchmark": false,
+      "float32_matmul_precision": "highest"
+    },
+    "device_capability": [
+      12,
+      1
+    ],
+    "device_count": 1,
+    "device_name": "NVIDIA GB10",
+    "import_error": null,
+    "importable": true,
+    "native_overrides": {
+      "disabled_dsl": [
+        "triton"
+      ],
+      "disabled_ops": [
+        "bmm"
+      ],
+      "probed": true,
+      "reason": "CPython development headers absent (/usr/include/python3.12/Python.h); install python3-dev to restore the stock Triton routing",
+      "triton_overrides_available": false
+    },
+    "sdpa_available": true,
+    "total_memory_bytes": 130663165952,
+    "version": "2.14.0+cu130"
+  }
+}
