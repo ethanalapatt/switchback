@@ -1,0 +1,189 @@
+{
+  "config_name": "smoke",
+  "config_sha256": "0135db34c3099794b5a797a66c88142dabc7a9983a93cf23d782490dd8914c02",
+  "datasets": {
+    "gsm8k": {
+      "config": "main",
+      "license": "mit",
+      "repo_id": "openai/gsm8k",
+      "revision": "740312add88f781978c0658806c59bc2815b9866"
+    },
+    "mbpp": {
+      "config": "full",
+      "license": "cc-by-4.0",
+      "repo_id": "google-research-datasets/mbpp",
+      "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c"
+    }
+  },
+  "generated_at": "2026-09-12T11:11:09+00:00",
+  "prompts": [
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_927",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "927",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6ea7eda1f4233f64ed138678274ed9938cd4b0220683f5597676d6c2837e8cf8"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_662",
+      "prompt_tokens": 35,
+      "role": "calibration",
+      "source_row_id": "662",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "02f9af4ef7cd87b0b82bf66ec4f17a784b6a02b35d9f797e02fa8004da161c3d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_855",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "855",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "eb4b844431bea6e3401effb22d3a0007d2a8a30450ed5c1a0df2612cc856a6f2"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_757",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "757",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1a4471f912fcbe9a092cbf598fbb9cdfb9f223a1d1160e27657e952c2ce69537"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_51",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "51",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a903d3df1c0eb7bcf1f76fcc4169a253912b8149bb3815b6912864fcc334ce6c"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_365",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "365",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d85579b422810bac51e12dcad6a02662b16a3ed697bad10b84c2e811e2db42de"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_371",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "371",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "8d4c875df1f227bd2e943bff6bf43a38eb4b523b053d6b7c0cc54eabf1fb25bd"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_384",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "384",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "36b8a2e2f2c42a10e6c2221b336ebed34fa91c29f195cb67cb5b0cf5e289962a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7159",
+      "prompt_tokens": 82,
+      "role": "calibration",
+      "source_row_id": "7159",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "bac215f537a8e3c9a7886e3e09acd4b545b2022dcf95a68a8189f40a361e02f8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2168",
+      "prompt_tokens": 96,
+      "role": "calibration",
+      "source_row_id": "2168",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6e835caf2e1ef60ceb6e6e6eb202c1df82935c0017d1b2e34168513e3c4d26a8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2566",
+      "prompt_tokens": 43,
+      "role": "calibration",
+      "source_row_id": "2566",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "7761b7039d4442bcec526c67e64c709dc9eb6f51722c13bb2258cd69ad143610"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1",
+      "prompt_tokens": 53,
+      "role": "calibration",
+      "source_row_id": "1",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3a8dc525cfcae94fb97537bf504d83d501ac2d2a0394c6f16f81958d7c12fbb6"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_723",
+      "prompt_tokens": 73,
+      "role": "heldout",
+      "source_row_id": "723",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b67ba462183f5700515ec53c4b2624fef6ff86fd48ef41ac7b5c67f33d9a571c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_224",
+      "prompt_tokens": 87,
+      "role": "heldout",
+      "source_row_id": "224",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2ddf7e8f4fac0415acea912eaed905e1f6e438e6fea0f074f9c9220bf2bdac58"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1275",
+      "prompt_tokens": 95,
+      "role": "heldout",
+      "source_row_id": "1275",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c4834b1ea775fdc919816afad86a23d96b967ad7c308e2caa5d11af7ee0e01e3"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_670",
+      "prompt_tokens": 72,
+      "role": "heldout",
+      "source_row_id": "670",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "35d70f1d6fdcf397235d704fddf8f9b34cb6328acf2b31991ca8ea3e7b10d60a"
+    }
+  ],
+  "schema_version": 1,
+  "selection_recipe": "Sort rows by SHA-256 of (revision + split + stable_row_id), then take the required count. GSM8K has no stable row id, so source order at the locked revision is used.",
+  "source": {
+    "commit": "4190b9f66114c1d1c1fb373ca541676c20bb81ef",
+    "dirty": false,
+    "source_sha256": "3d10b042464c5028bcb131685b8b47baddb4fc539cdf94920ffca6e9cebed4d0"
+  },
+  "workload_sha256": "eb932ebe192c0cc1f6524444ccb4458bcea49594a357bb2624d025aeb4e3d5c7"
+}
