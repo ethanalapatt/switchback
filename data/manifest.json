@@ -1,5 +1,18 @@
 {
-  "datasets": {},
+  "datasets": {
+    "gsm8k": {
+      "config": "main",
+      "license": "mit",
+      "repo_id": "openai/gsm8k",
+      "revision": "740312add88f781978c0658806c59bc2815b9866"
+    },
+    "mbpp": {
+      "config": "full",
+      "license": "cc-by-4.0",
+      "repo_id": "google-research-datasets/mbpp",
+      "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c"
+    }
+  },
   "generated_at": "2026-09-12T08:41:33+00:00",
   "models": {
     "draft": {
