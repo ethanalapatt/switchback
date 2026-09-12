@@ -107,3 +107,28 @@ def test_dirty_ignores_untracked_files_but_the_digest_does_not(tmp_path: Path) -
     # A tracked modification does set the flag.
     (root / "src" / "switchback" / "decoder.py").write_text("x = 99\n")
     assert collect_source_provenance(root).dirty is True
+
+
+def test_a_modified_tracked_artifact_does_not_mark_the_tree_dirty(tmp_path: Path) -> None:
+    """A benchmark rewrites its own evidence file; that is not a code change."""
+    import subprocess
+
+    root = tmp_path / "repo"
+    build_tree(root, "x = 1\n")
+    (root / "artifacts").mkdir()
+    (root / "artifacts" / "evidence.json").write_text("{}\n")
+    for args in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "test@example.invalid"],
+        ["config", "user.name", "Test"],
+        ["add", "-A"],
+        ["commit", "-q", "-m", "initial"],
+    ):
+        subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+    assert collect_source_provenance(root).dirty is False
+    (root / "artifacts" / "evidence.json").write_text('{"passed": true}\n')
+    assert collect_source_provenance(root).dirty is False
+    # A behaviour-defining file still does.
+    (root / "src" / "switchback" / "decoder.py").write_text("x = 2\n")
+    assert collect_source_provenance(root).dirty is True

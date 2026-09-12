@@ -20,6 +20,19 @@ SOURCE_GLOBS: tuple[str, ...] = (
     "scripts/*.py",
 )
 
+# Paths whose modification changes what a run does. The dirty flag is computed
+# over these only. ``artifacts/`` is deliberately excluded: a benchmark writes
+# its own output there while it runs, so including it would make every measured
+# run dirty and the renderer's ``git_dirty=false`` requirement unsatisfiable.
+BEHAVIOUR_PATHS: tuple[str, ...] = (
+    "src",
+    "bench",
+    "scripts",
+    "configs",
+    "data",
+    "pyproject.toml",
+)
+
 
 def repo_root() -> Path:
     """Directory containing ``pyproject.toml`` for the installed source tree."""
@@ -68,13 +81,13 @@ class SourceProvenance:
     ``commit`` is ``None`` when the tree has no commits yet; the report renderer
     refuses such a run rather than inventing a hash.
 
-    ``dirty`` reports *tracked* modifications only. Untracked files are excluded
-    because a benchmark writes its own output into ``artifacts/`` while running,
-    which would otherwise mark every measured run dirty and make the renderer's
-    ``git_dirty=false`` requirement unsatisfiable. Untracked source files are not
-    thereby ignored: ``source_sha256`` hashes every file matching SOURCE_GLOBS
+    ``dirty`` reports tracked modifications under :data:`BEHAVIOUR_PATHS` only.
+    Untracked files and generated artifacts are excluded, because a benchmark
+    writes its own output into ``artifacts/`` while running and would otherwise
+    mark every measured run dirty. Untracked *source* files are not thereby
+    ignored: ``source_sha256`` hashes every file matching :data:`SOURCE_GLOBS`
     whether git knows about it or not, so a new uncommitted module still changes
-    the recorded digest.
+    the recorded digest even though it would not set this flag.
     """
 
     commit: str | None
@@ -110,7 +123,7 @@ def collect_source_provenance(root: Path | None = None) -> SourceProvenance:
     commit = _git(base, "rev-parse", "HEAD")
     if commit is not None and len(commit) != 40:
         commit = None
-    status = _git(base, "status", "--porcelain", "--untracked-files=no")
+    status = _git(base, "status", "--porcelain", "--untracked-files=no", "--", *BEHAVIOUR_PATHS)
     dirty = None if status is None else bool(status.strip())
     digest, count = source_digest(base)
     return SourceProvenance(commit=commit, dirty=dirty, source_sha256=digest, file_count=count)
