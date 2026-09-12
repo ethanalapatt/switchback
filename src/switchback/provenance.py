@@ -67,6 +67,14 @@ class SourceProvenance:
 
     ``commit`` is ``None`` when the tree has no commits yet; the report renderer
     refuses such a run rather than inventing a hash.
+
+    ``dirty`` reports *tracked* modifications only. Untracked files are excluded
+    because a benchmark writes its own output into ``artifacts/`` while running,
+    which would otherwise mark every measured run dirty and make the renderer's
+    ``git_dirty=false`` requirement unsatisfiable. Untracked source files are not
+    thereby ignored: ``source_sha256`` hashes every file matching SOURCE_GLOBS
+    whether git knows about it or not, so a new uncommitted module still changes
+    the recorded digest.
     """
 
     commit: str | None
@@ -102,7 +110,7 @@ def collect_source_provenance(root: Path | None = None) -> SourceProvenance:
     commit = _git(base, "rev-parse", "HEAD")
     if commit is not None and len(commit) != 40:
         commit = None
-    status = _git(base, "status", "--porcelain")
+    status = _git(base, "status", "--porcelain", "--untracked-files=no")
     dirty = None if status is None else bool(status.strip())
     digest, count = source_digest(base)
     return SourceProvenance(commit=commit, dirty=dirty, source_sha256=digest, file_count=count)

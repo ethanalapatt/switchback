@@ -71,3 +71,39 @@ def test_collected_provenance_describes_this_checkout() -> None:
     assert provenance.file_count > 0
     assert len(provenance.source_sha256) == 64
     assert provenance.commit is None or len(provenance.commit) == 40
+
+
+def test_dirty_ignores_untracked_files_but_the_digest_does_not(tmp_path: Path) -> None:
+    """A benchmark writes artifacts into its own repository while it runs."""
+    import subprocess
+
+    root = tmp_path / "repo"
+    build_tree(root, "x = 1\n")
+    for args in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.email", "test@example.invalid"],
+        ["config", "user.name", "Test"],
+        ["add", "-A"],
+        ["commit", "-q", "-m", "initial"],
+    ):
+        subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+    before = collect_source_provenance(root)
+    assert before.dirty is False
+    assert before.commit is not None and len(before.commit) == 40
+
+    (root / "artifacts").mkdir()
+    (root / "artifacts" / "requests.jsonl").write_text("{}\n")
+    after_artifact = collect_source_provenance(root)
+    assert after_artifact.dirty is False
+    assert after_artifact.source_sha256 == before.source_sha256
+
+    # An untracked source file is still caught, by the digest rather than by git.
+    (root / "src" / "switchback" / "sampling.py").write_text("y = 2\n")
+    after_source = collect_source_provenance(root)
+    assert after_source.source_sha256 != before.source_sha256
+    assert after_source.file_count == before.file_count + 1
+
+    # A tracked modification does set the flag.
+    (root / "src" / "switchback" / "decoder.py").write_text("x = 99\n")
+    assert collect_source_provenance(root).dirty is True
