@@ -1,0 +1,2589 @@
+{
+  "config_name": "primary",
+  "config_sha256": "98412ef0665e2aca4ee8339f1050908418260f8002046dccbbec35ee795d9e5d",
+  "datasets": {
+    "gsm8k": {
+      "config": "main",
+      "license": "mit",
+      "repo_id": "openai/gsm8k",
+      "revision": "740312add88f781978c0658806c59bc2815b9866"
+    },
+    "mbpp": {
+      "config": "full",
+      "license": "cc-by-4.0",
+      "repo_id": "google-research-datasets/mbpp",
+      "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c"
+    }
+  },
+  "generated_at": "2026-09-12T11:25:38+00:00",
+  "prompts": [
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_927",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "927",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6ea7eda1f4233f64ed138678274ed9938cd4b0220683f5597676d6c2837e8cf8"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_662",
+      "prompt_tokens": 35,
+      "role": "calibration",
+      "source_row_id": "662",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "02f9af4ef7cd87b0b82bf66ec4f17a784b6a02b35d9f797e02fa8004da161c3d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_855",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "855",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "eb4b844431bea6e3401effb22d3a0007d2a8a30450ed5c1a0df2612cc856a6f2"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_757",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "757",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1a4471f912fcbe9a092cbf598fbb9cdfb9f223a1d1160e27657e952c2ce69537"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_932",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "932",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "56e25a6b7c579e2be57ef70c37dd02261c65f9227eda2ffad45cb4258083ff69"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_901",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "901",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "7f88d19d267767530514388cc3e57751ced5e25a2bc3570681bb38994edb07eb"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_721",
+      "prompt_tokens": 49,
+      "role": "calibration",
+      "source_row_id": "721",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9dc43bd84d7fa9ab3b2fcf6fd5bdc1270ff23bec3c15b5da01090cd171875793"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_696",
+      "prompt_tokens": 35,
+      "role": "calibration",
+      "source_row_id": "696",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1f41f3463cac4a5f54220ce775918352b8e151d11fdbe0c0402cb4a6d2a07680"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_771",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "771",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b118632e74fd03e3d502d761487aa252b28dbb0d1a70c0be24d8aa49a3dd1461"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_971",
+      "prompt_tokens": 48,
+      "role": "calibration",
+      "source_row_id": "971",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "41d458d2bbedf9be130d83ae5e2492bde5b1bb408d6a8b30b328e493d6a374af"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_922",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "922",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a5486e6a312a90284de01108329f808a2a6d6062148b00b764889fdef8550a6b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_832",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "832",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a70e5bcccb4ec64c622ea83c84267d11b3f443086c7657691902e2aa81a3070d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_773",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "773",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1fd6cd14e06a8516f3e936d5159b1739b348f34cd39ed1a28b83f991c4f6056f"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_656",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "656",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "cc3f761bd1d86fc003b59925409990a7b8795807b7ed0c376e5f464daaf441e9"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_763",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "763",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f4e0cf20b45b48662d38d76555e63bf642fed7c718548f767de6a662ef741cdf"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_761",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "761",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "e0e27b855a2d210995ad451e7366c354b8a4b2ebaaa348d32fa4db81ee19b659"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_868",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "868",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "78d7eb2e5cccb9d3a353c643f555ded6234b6f459743b8cd24375cc62c1ce5af"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_838",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "838",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "17592077dd1cfd6b21d44133e12b12126ce36d708fa3f0e55d5f8bfdc3b466bb"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_769",
+      "prompt_tokens": 36,
+      "role": "calibration",
+      "source_row_id": "769",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "237564769b99cf9b57257118063c74212f4b045d75a2d9f2171dd9b28badbe7b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_870",
+      "prompt_tokens": 45,
+      "role": "calibration",
+      "source_row_id": "870",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "d69d81552d500dfa2d48c572e5332d2dcc48eaeda919a29e7a419af5431d4525"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_920",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "920",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "bd63c14d44ac23818e269eca8c48535603d70bd99ae7eb0428e2cd6cebf1edc1"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_698",
+      "prompt_tokens": 44,
+      "role": "calibration",
+      "source_row_id": "698",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9715dceff732407fe67c33d743525b7964e7d57cfb2e423b1169efa8a65d2de7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_972",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "972",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b4c89a21ac653a23adb166612e58281b043e8ff227cff7d3cdc5f8dbffb8953d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_734",
+      "prompt_tokens": 39,
+      "role": "calibration",
+      "source_row_id": "734",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f57994a696ba70e0c39e9c8171e1b9275a5fed6e2b1fb3bbb58d0fad1e2c9380"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_648",
+      "prompt_tokens": 61,
+      "role": "calibration",
+      "source_row_id": "648",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "220a9f8b15825a9f106fae7ee48a52a70ed19152ffe6bc2021940db500ad5541"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_834",
+      "prompt_tokens": 51,
+      "role": "calibration",
+      "source_row_id": "834",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "de7af129e885974011d546468073e9f685cce0c3bd4786e3483a0fb0ff059657"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_784",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "784",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "0575c40c6ba333d49a6b7d74ff23fe3fbfe8fc9685701c79d01f761c4a08d1b7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_644",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "644",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9a5c691cb134742b3145aec39a9637ad79ae5ba62a03d0137b9aed4c69cfbbcb"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_964",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "964",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8cebbf3791c087b68cf8b8fdd0e47382507f084bb43167251f46b9a28f83c2d9"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_685",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "685",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "91ae085e32f8293cb70bc831a2536d6800443a8e865e066105f6212460e5611b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_885",
+      "prompt_tokens": 44,
+      "role": "calibration",
+      "source_row_id": "885",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "458bd26348ddbbc0ab7078ad678283eeca101ecd83704ae0321621891a79e673"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_765",
+      "prompt_tokens": 33,
+      "role": "calibration",
+      "source_row_id": "765",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a107d57bca7fd9b419e3ae4f2b616e3563547480b6258d85a584e665959dbf0c"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_931",
+      "prompt_tokens": 48,
+      "role": "calibration",
+      "source_row_id": "931",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3bda52729a0ed0f40d54e763f2bed0090273a5123e686481b5641516c486dc55"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_851",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "851",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9840c95de78c27dd28ff251cdb79c3211c92bf10549c557c849f5a1596925ac9"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_906",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "906",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a7ebebdf0906932bb3cb563a298198fe5ed6282c58f953340bafce3c4262bc97"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_869",
+      "prompt_tokens": 45,
+      "role": "calibration",
+      "source_row_id": "869",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f0d01e925f3a71d0951e52677e906fa4410b33265db1307022ac4a3a6455ed0b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_655",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "655",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3eb9ffa101dedc23a664313f8d77714afe5f0785b47d75279c7e250a0757b3d5"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_887",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "887",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a35bbdd823f1d2ac77ed2c1f83e013358d9650e2259a0664e88fd86da9be3424"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_904",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "904",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f482e08a61536783eae7e42ffeba7e06a157f2b4cd82a3d9f635e4a42e8f1ace"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_888",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "888",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f83fabc92df67ca1c75dcbc4b074e19464ab17dccf0d5bb855ebb52c3f742b1a"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_952",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "952",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "318b6548a5acbe9879c8608663b493d2ab428fc61368d84bd523351104b0536d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_946",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "946",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8d88646cad5a95e268e4b0d22a8e15b2540b0cb62eb309a9ffed3055155a18c6"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_829",
+      "prompt_tokens": 44,
+      "role": "calibration",
+      "source_row_id": "829",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a051ea0172d51d73df28187244dac1e129d39f2004eb1d4333d10d96732f4094"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_716",
+      "prompt_tokens": 36,
+      "role": "calibration",
+      "source_row_id": "716",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b939782e9f626b85685ad38c52cbee48f0124a7cb60298c00409b9e2fac34bcc"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_735",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "735",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "d0275672f55d68e11ae6e574b2b48a41018725654ab591048c4454a78dae4e04"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_731",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "731",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "09b070c30fbceb770823b09535404ea1fa526e1777988aa52c6bc5761f83c782"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_935",
+      "prompt_tokens": 48,
+      "role": "calibration",
+      "source_row_id": "935",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "198472245f8c3b29fdad2ab184136a40956874b53690701a9b4153d8e32b55e7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_772",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "772",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "c928a94e8f93c460b63094dcc42d26de48bcf9734861b6e06bd67692f76b3eb3"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_954",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "954",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "c40e684321dcc18e5ff56db1231822c513fd23a8935ccf2122120612110174dd"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_713",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "713",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8b92d6f2da5e723ab5c74ed724daef580bbc4d0a34ec1ffb570dc6e4dbd38913"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_720",
+      "prompt_tokens": 35,
+      "role": "calibration",
+      "source_row_id": "720",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "4e04c3c738bc3e9b82f01f6fa0bdedc27b10626cfa5998fa4fd77eabd32db760"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_941",
+      "prompt_tokens": 41,
+      "role": "calibration",
+      "source_row_id": "941",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "74d305ccfcea419d80f997d4297d198933d47785293b36a3f44c89ebd936901e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_945",
+      "prompt_tokens": 35,
+      "role": "calibration",
+      "source_row_id": "945",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "5efb15e71c065304561345d1d84ccb2edb1edbbf98f7c0472fa91346311fabc8"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_866",
+      "prompt_tokens": 42,
+      "role": "calibration",
+      "source_row_id": "866",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "ad50cce0526c8e234b729562981588ed612e240e2511e06d1e9228f9b60a21a1"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_693",
+      "prompt_tokens": 38,
+      "role": "calibration",
+      "source_row_id": "693",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b070fae57be5fe3426723a59b494950429698e68917b9ecca3f3a298183e3eb2"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_737",
+      "prompt_tokens": 43,
+      "role": "calibration",
+      "source_row_id": "737",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "e0216da8ffa332e7c20e64c81741e1db6f1a21cb3d302477d90c7959f6b4fee1"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_959",
+      "prompt_tokens": 36,
+      "role": "calibration",
+      "source_row_id": "959",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9b3e3e7c7caf9728636a13354bce1b4835df0d95cf4eb856281e5e65c73a7f4e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_673",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "673",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3dec1d12736efdc9b2d5c5287d709c664c6066adb02628f02cabff06ad829720"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_821",
+      "prompt_tokens": 36,
+      "role": "calibration",
+      "source_row_id": "821",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "fb9c7fb9c8b248312a437cb2e4716dac6e21a29b93353697a23a9c76fbf64b81"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_789",
+      "prompt_tokens": 36,
+      "role": "calibration",
+      "source_row_id": "789",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "5101325dff1454c7636efe3b6cb5ff1a34f21859e1dc28f0c7a688c22afc3ea9"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_689",
+      "prompt_tokens": 74,
+      "role": "calibration",
+      "source_row_id": "689",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8fdb8e791f06642ea4f830c480f2b8d6325dc3564218a47b65dd9ab61da8ab2b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_723",
+      "prompt_tokens": 40,
+      "role": "calibration",
+      "source_row_id": "723",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "c8521819351364298c227f567fc1361d18ed1bcda5c84945ec9fc8c47200bd3d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_608",
+      "prompt_tokens": 34,
+      "role": "calibration",
+      "source_row_id": "608",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "2bd22fb406e158b53bcb8b18ef1c72cc932b77ffca06a21002f8c5d944e24b07"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_calibration_738",
+      "prompt_tokens": 37,
+      "role": "calibration",
+      "source_row_id": "738",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "dc75b6435aeb49125f374ef4bf3a69e1e50baa7564d1519fe8c3b2f9737fcf94"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_51",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "51",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a903d3df1c0eb7bcf1f76fcc4169a253912b8149bb3815b6912864fcc334ce6c"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_365",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "365",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d85579b422810bac51e12dcad6a02662b16a3ed697bad10b84c2e811e2db42de"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_371",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "371",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "8d4c875df1f227bd2e943bff6bf43a38eb4b523b053d6b7c0cc54eabf1fb25bd"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_384",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "384",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "36b8a2e2f2c42a10e6c2221b336ebed34fa91c29f195cb67cb5b0cf5e289962a"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_80",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "80",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "836ee920a35da904a15c35789aab4eb95b6d021f34174944881945346f9da607"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_231",
+      "prompt_tokens": 40,
+      "role": "heldout",
+      "source_row_id": "231",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a012d4ee7f4160f45cb551010d8c2a08d662489912e0153832a2168c7e3a2f59"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_297",
+      "prompt_tokens": 35,
+      "role": "heldout",
+      "source_row_id": "297",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "190c407db61d69b3034f718ff373b018f9d696d6cc99b9d2c8222971d0d34177"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_506",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "506",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a77e021206755922fe600de37804b7e3a0a321a77051a5b82928eb36d0f0fedf"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_232",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "232",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "41c67b266e1bfc03426edbbb0686b269a7a0ed9d6ccde946701ff24a9388067b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_483",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "483",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "7266294c2a77bf4eb755857a11d43b30c3c09bc51d9c97e18b4a7022b845362e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_263",
+      "prompt_tokens": 32,
+      "role": "heldout",
+      "source_row_id": "263",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2e55c8c6985ac56b8e3f882cb78d8cb29dd88ddbce87e39e1a0ab8425d786810"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_261",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "261",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "201ef2c28518f4fb9b8164fd01ae7eb26bc13d8045f28b47c95d24c919ac53f2"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_401",
+      "prompt_tokens": 42,
+      "role": "heldout",
+      "source_row_id": "401",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f9278d12f0fe0bfeb5a76297a9f886b74298e3788339a7c37fdd49bc379bc526"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_136",
+      "prompt_tokens": 32,
+      "role": "heldout",
+      "source_row_id": "136",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bfc968fde137174ef5a2d37f437967c7686409913efbd82b4388d588f4f21d2e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_116",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "116",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c8dc846b4afb32d85fe5544bb9f5e71a4b9cb2fb1666c9c9143fdb7a3ec2c15e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_228",
+      "prompt_tokens": 43,
+      "role": "heldout",
+      "source_row_id": "228",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bce10391a26c5fd6a9e6c9c05e29001568c15e5ac6bef357673d386bde088c4d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_207",
+      "prompt_tokens": 50,
+      "role": "heldout",
+      "source_row_id": "207",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "70eea4c4e369a11e232a1f1a7bc50b2012dcaba7c3836c3dc02202043683a837"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_26",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "26",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "cc7c6f410264705511c22b860254d03684f0eeef322cbfa23da14b0feae3fe01"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_146",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "146",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "99257ae3970ee74e3347255a279ed40928e1318702f49bc9ea3ede8d98d92cf7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_45",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "45",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "46f7815a741f7c7fc50451e82c16f5e89d3484429010d08dd6caaf6a156fe730"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_448",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "448",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "7daf8899368d1aae94917cfb81166492f20dbc811d7e51c00732ac82928ff50d"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_293",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "293",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b3c65c1d0024252d9649bcbf2c0a4e859fa8c799bcbc18409108dc3c19294758"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_260",
+      "prompt_tokens": 42,
+      "role": "heldout",
+      "source_row_id": "260",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "358b3af6e1e798bf5ff5c95201b0a71f41287ab40f1e4c9cafc9edfce3e8b92a"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_481",
+      "prompt_tokens": 46,
+      "role": "heldout",
+      "source_row_id": "481",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bd1e684b2ba2df17037adb9052886faec11c6bca5c735c2f91a1a86952f1f8d1"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_349",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "349",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d75f4534af669acec738868b7e7998854a6d4cad926c90c9203f1c5c9a7d6e9c"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_353",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "353",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e3fccfe004a27791277cabdc80c4ba884c2ac5043f6cc86da400c05d71c099e3"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_172",
+      "prompt_tokens": 71,
+      "role": "heldout",
+      "source_row_id": "172",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e17dc6350b08268a31b235786a88e8677d8ba0a773214885049815e69952f40e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_239",
+      "prompt_tokens": 63,
+      "role": "heldout",
+      "source_row_id": "239",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "7c39ecc318a96ec43fc3f88f2d557e01d55a3e0b7557a502b96b008d714a376e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_389",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "389",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6168ea56d2b0c5c2aacd6e5f287f09cafb90077a8b5940d38a2edf39124a72d7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_169",
+      "prompt_tokens": 35,
+      "role": "heldout",
+      "source_row_id": "169",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "cc65a1f2d20cbb02718cd4e62fc1b3d22239c918b614796d1af69501126066a4"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_270",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "270",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "55e8dbd5f5fedeba79f035f0439f46203eb507ccd9ae495ee81e794f4af64f34"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_305",
+      "prompt_tokens": 42,
+      "role": "heldout",
+      "source_row_id": "305",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "5acf0ca1e25c585009481ed4e4b9adcd4d1f53ff22b9275294d752e74c775ce7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_50",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "50",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "ce4a6eee9fa62888cc9e658a57430cc32069d2a5d107681cd4f6630a509f44ec"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_187",
+      "prompt_tokens": 40,
+      "role": "heldout",
+      "source_row_id": "187",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b2b70d474d4b9dcb45dd533fe10b45be01c4ac2de3f96e7baec36613ae59b590"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_16",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "16",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "655988ef699be6635355805fe10c72efaf02d8de028ee5a28cb5e7604196237b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_155",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "155",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "522651fb0a7848034d47980b39ccac853475bc1d1eb907cb6d82d9552194d9b3"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_439",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "439",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "33e6a78a4c73b4c9c27e0ccc7c21ef12e2401fd3b0bfc8ec7c7f50565283e7a0"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_124",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "124",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "914df7ee91c090ddb0ccdfeb30f1b17fc1e106f40f822dafce30b0040d54ca7a"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_243",
+      "prompt_tokens": 42,
+      "role": "heldout",
+      "source_row_id": "243",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d5672218dacfeaaf0e34b47740002c6423a74b59cdc09752d328855d5fe0c005"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_79",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "79",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "8ff0808b354cec627164c0e712de25b77e2be0a1eee0924e3a1c333657c007c5"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_461",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "461",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "89125df754490e0d1a95bae6f3d5edd2524b8cc4a8e4ba11f4b46dc2cdbbfef1"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_356",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "356",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "223f9ec7c9f53b9f5c2b8a7e995d90794dd7ef2d8a8c712250262007a3ce5b31"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_510",
+      "prompt_tokens": 46,
+      "role": "heldout",
+      "source_row_id": "510",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "33089781a8f4b78713f801d95e0a3bc9d27d14460336224da522a9bd5982f51f"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_258",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "258",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d9cb60eceea81efd83e693ff7b58948309219d8dd028fcc9ceefb44115a5c31e"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_29",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "29",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "02d193bf26b920360015bee977713c872819b311eead5b6f471c0c7293f4c5d4"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_257",
+      "prompt_tokens": 32,
+      "role": "heldout",
+      "source_row_id": "257",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "62f680018002703bda783df9e57f5b6baae849e633aad4259f3a9b7af8dc6471"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_441",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "441",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "180d05e442921e5e560ae508d2357620e08e6a0212f06cee270b962b49539242"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_236",
+      "prompt_tokens": 48,
+      "role": "heldout",
+      "source_row_id": "236",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "4d8dbc163b113c8a024b1d023911a203da280ef11491bb228e7a0c49df2c79f7"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_385",
+      "prompt_tokens": 40,
+      "role": "heldout",
+      "source_row_id": "385",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "294f1af5bde53b60d17a5679488f78585934b423d49a8ec464c4e841d876c5da"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_191",
+      "prompt_tokens": 42,
+      "role": "heldout",
+      "source_row_id": "191",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "8d7f9f810b98935e13fd6432e2d7a15ffd3f52b6b1efe96cd7b36bfa5b0470c8"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_34",
+      "prompt_tokens": 38,
+      "role": "heldout",
+      "source_row_id": "34",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c86c0f2fa3b34ffe870030ada2476843717952c34380fd14a7656305cee1b02b"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_206",
+      "prompt_tokens": 39,
+      "role": "heldout",
+      "source_row_id": "206",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c093b221e3dc73f6de6c4e5f61e9e751ca95189b827f1bb91527d9652fc08a47"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_244",
+      "prompt_tokens": 40,
+      "role": "heldout",
+      "source_row_id": "244",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "1b50079bee16828c3a7700d558f4d80816f525f6b3fd06e9365529a800bc18f4"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_21",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "21",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2aa57bc3e560909b39dc2401b4a2ba08e95bd5dea97694044e48b76b7f083b35"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_189",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "189",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "87cc27dfbd2247ce80a3b807900529d1ed876d57424498fbd2e617142edee8d6"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_434",
+      "prompt_tokens": 43,
+      "role": "heldout",
+      "source_row_id": "434",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "7d65e229ef1a64ec212078f8c3e3aa206d8fb5fce65c40d9b9e2f382ab30de80"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_300",
+      "prompt_tokens": 56,
+      "role": "heldout",
+      "source_row_id": "300",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "0a04745b3cf5f7ba9630299aea5ccd85faa5cedde34474ecb34b84637467f8c5"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_157",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "157",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bebe922abeba0227b09ee07e5cc10ba6cc2d28324e979846f7ec0d1c28ebada8"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_342",
+      "prompt_tokens": 46,
+      "role": "heldout",
+      "source_row_id": "342",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bf89936aab0e5a9fabea2d5bc8c8c2561e781eb9c582460dbca4c36b783dad03"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_445",
+      "prompt_tokens": 41,
+      "role": "heldout",
+      "source_row_id": "445",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b3302324ea18ddc202e5c8964fa8fa9b6be7ae7c23919be65d48af12994930f5"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_129",
+      "prompt_tokens": 32,
+      "role": "heldout",
+      "source_row_id": "129",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6a197cf8c88158725ee8c06ab84f3a7acdff65eecd1489b9c8220bb5123b3f92"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_266",
+      "prompt_tokens": 37,
+      "role": "heldout",
+      "source_row_id": "266",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "3dc8706bdf8cec1c1dd1725463fca296dd731c9fa805fafd0b891b7c15d5fb44"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_418",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "418",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "83b182032cada0aad602841691c5c414f2d016fa7a083ae55ce2f96b6b26f414"
+    },
+    {
+      "dataset": "mbpp",
+      "prompt_id": "mbpp_heldout_66",
+      "prompt_tokens": 36,
+      "role": "heldout",
+      "source_row_id": "66",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c97c0f48a83aa51117a59de628d6f6e18e1e41c2d2781e4ca63df62deef0c69c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7159",
+      "prompt_tokens": 82,
+      "role": "calibration",
+      "source_row_id": "7159",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "bac215f537a8e3c9a7886e3e09acd4b545b2022dcf95a68a8189f40a361e02f8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2168",
+      "prompt_tokens": 96,
+      "role": "calibration",
+      "source_row_id": "2168",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6e835caf2e1ef60ceb6e6e6eb202c1df82935c0017d1b2e34168513e3c4d26a8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2566",
+      "prompt_tokens": 43,
+      "role": "calibration",
+      "source_row_id": "2566",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "7761b7039d4442bcec526c67e64c709dc9eb6f51722c13bb2258cd69ad143610"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1",
+      "prompt_tokens": 53,
+      "role": "calibration",
+      "source_row_id": "1",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3a8dc525cfcae94fb97537bf504d83d501ac2d2a0394c6f16f81958d7c12fbb6"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1119",
+      "prompt_tokens": 112,
+      "role": "calibration",
+      "source_row_id": "1119",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9ab36d2221786af2788eab6ddffcd19a8d3999f8933d61a3d1182e32ce0afe88"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_222",
+      "prompt_tokens": 77,
+      "role": "calibration",
+      "source_row_id": "222",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a3d740377e05cbfc1af82ea6a4a2cfab12f994dd8d6e863a69633335e703a8d3"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6638",
+      "prompt_tokens": 59,
+      "role": "calibration",
+      "source_row_id": "6638",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3a0529181409e3d71df01b470626516b969a2b53b4c6b67ac70065bf1bd66a02"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_688",
+      "prompt_tokens": 48,
+      "role": "calibration",
+      "source_row_id": "688",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "73f109542a48c8fa00fd9f313960be1f3377e4ded01c0e3e7105ea356aece289"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2515",
+      "prompt_tokens": 108,
+      "role": "calibration",
+      "source_row_id": "2515",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "74096ba796e2f88873a8baa31f8baef6a7de76a3417860e608ab10e204bc42f4"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2567",
+      "prompt_tokens": 120,
+      "role": "calibration",
+      "source_row_id": "2567",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "d41319debdb0b97192daca3eb2b388bdcb59eabe4280fafcd8f85dfe085b5867"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1687",
+      "prompt_tokens": 89,
+      "role": "calibration",
+      "source_row_id": "1687",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "576c508a218cf5a59bd18d40c4577785d47b8eb919ef0c212887261603f62696"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3348",
+      "prompt_tokens": 88,
+      "role": "calibration",
+      "source_row_id": "3348",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "4d4c37ee6915332bce2b24b5a32ac92e1650199baa00df19b755e03fca543773"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1939",
+      "prompt_tokens": 54,
+      "role": "calibration",
+      "source_row_id": "1939",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8921116dc7cd43f316d4b950b424772e1db7a966fc94fa3f7749d9727954d560"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4124",
+      "prompt_tokens": 113,
+      "role": "calibration",
+      "source_row_id": "4124",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3e0d61173ed818dc371922f021317816e2f650711b1de1f44ee185b59edabf4b"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_826",
+      "prompt_tokens": 53,
+      "role": "calibration",
+      "source_row_id": "826",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "da367648de853c374d71c587bf773eb52e79e1e5deae58819dbebc7b631d0670"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_142",
+      "prompt_tokens": 86,
+      "role": "calibration",
+      "source_row_id": "142",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "dd9bee0136baced6cac8770c7ea38cfc5521fc09678fee68e08a1dff91ecff14"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_859",
+      "prompt_tokens": 78,
+      "role": "calibration",
+      "source_row_id": "859",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "ea4aa47d21b602e3e22a66c5d5109187f9b3aaeb46e646fe7f73a4443d61dde5"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1196",
+      "prompt_tokens": 74,
+      "role": "calibration",
+      "source_row_id": "1196",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "7764a7681827c8f069e3757845ab2438bbf408934bba98a5a524873e6fb8d78e"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_319",
+      "prompt_tokens": 72,
+      "role": "calibration",
+      "source_row_id": "319",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "d432c48e41a9c7e703c1b6ddf6af2ba12388057daa14eb1f6f78cde25f7c3630"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1437",
+      "prompt_tokens": 69,
+      "role": "calibration",
+      "source_row_id": "1437",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "97d52212b513b2c95c667aa36439ca1b52f4a0c95a5ca4b3327e31ad734a962a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5945",
+      "prompt_tokens": 90,
+      "role": "calibration",
+      "source_row_id": "5945",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3bc289377c7abe7b8722c330f6ce16db151db29b7e78e1b3a58d9c2f6d640860"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1950",
+      "prompt_tokens": 78,
+      "role": "calibration",
+      "source_row_id": "1950",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "33747b14b48d40bee312e4959c28c38d45f7ff2ce06ffb9119becfd016375680"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6073",
+      "prompt_tokens": 86,
+      "role": "calibration",
+      "source_row_id": "6073",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6cfb0b7f34d84690789e358447b00f625b8ad13b75f0cf1401a53d631c4c4db3"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4735",
+      "prompt_tokens": 55,
+      "role": "calibration",
+      "source_row_id": "4735",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "69db670a484d22c2f25408f77e307e71918ca80ebaf6243333d684e57660248d"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4992",
+      "prompt_tokens": 94,
+      "role": "calibration",
+      "source_row_id": "4992",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "49da9e12287815264e257ec5c0661d8141e521f801caa19ed961c899e0fed384"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5138",
+      "prompt_tokens": 60,
+      "role": "calibration",
+      "source_row_id": "5138",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "c7e9a9f7122cad9a3b5b9bc600a3038ed95eb59d3cee7f1dcfa9465f4c8cdfd9"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6321",
+      "prompt_tokens": 127,
+      "role": "calibration",
+      "source_row_id": "6321",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "f7d977bba7f78aabd29ee47d78784a97d061f637b81e426a3807868988a95c4a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4687",
+      "prompt_tokens": 96,
+      "role": "calibration",
+      "source_row_id": "4687",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9eaccbddc15d43f6da39195f1a56267dbcc5136002392ff3b0e0e302b770f878"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2810",
+      "prompt_tokens": 60,
+      "role": "calibration",
+      "source_row_id": "2810",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "61b9d63f20091e98c93b5d7f211ec12f6bb0ef1d92186b5077ae0b9a11e685d7"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4684",
+      "prompt_tokens": 72,
+      "role": "calibration",
+      "source_row_id": "4684",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "18afa4a1df5c50e3896f08fb86c2e809b8cc6472a247c825523916d2eb96393b"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3565",
+      "prompt_tokens": 65,
+      "role": "calibration",
+      "source_row_id": "3565",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "3725d9f52e7086a64af683c9a7320d0a79ac610d506f0873c80a49ccc636e86d"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6175",
+      "prompt_tokens": 60,
+      "role": "calibration",
+      "source_row_id": "6175",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "cd241327fc38ed3e113d829371207f45e6526e65a11030fc7ea76af1b1cc8cf3"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2991",
+      "prompt_tokens": 61,
+      "role": "calibration",
+      "source_row_id": "2991",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "db1e6eb1b8f66437a3bd33b4c47409c90f20903003139dffd56eb1088c0873d9"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2922",
+      "prompt_tokens": 75,
+      "role": "calibration",
+      "source_row_id": "2922",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "95f9275479b9b3df08328cea2fa7e0cf97be9c5219c9d84f97915c999c2a95e0"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4426",
+      "prompt_tokens": 63,
+      "role": "calibration",
+      "source_row_id": "4426",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b94845ea6365b05912d86b02f8ad70d325c074bf40f013c5de4148e65e41d303"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5556",
+      "prompt_tokens": 67,
+      "role": "calibration",
+      "source_row_id": "5556",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "cb3311c9b3c5d55563170151514131456ca782ef25bfb8bd7f7a353e178c7e3c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5087",
+      "prompt_tokens": 90,
+      "role": "calibration",
+      "source_row_id": "5087",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8c5cd0c70aa837758de5b729d1b00038d6ab2343489e5c51665d0b72c703b5dc"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4608",
+      "prompt_tokens": 98,
+      "role": "calibration",
+      "source_row_id": "4608",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1d88e6bd4eb3c96c3d93539bfa6e216e554e599bfec115a9dcf76a322e2b794b"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7187",
+      "prompt_tokens": 58,
+      "role": "calibration",
+      "source_row_id": "7187",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "68c8c722448989d59130da1d2e7261afb304f90ee2824969ff2e7840e94f9002"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_2102",
+      "prompt_tokens": 84,
+      "role": "calibration",
+      "source_row_id": "2102",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9324ace25a74040e4def627ed1ce27590e08cc01e548d58a5a7f85698fe2a156"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5057",
+      "prompt_tokens": 56,
+      "role": "calibration",
+      "source_row_id": "5057",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6de64a2d72a92a64b1bef40294eebea429686a657e70bed1b73b831a870001a4"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7373",
+      "prompt_tokens": 86,
+      "role": "calibration",
+      "source_row_id": "7373",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "701a12919dc24bd04526c0cabd988e99b0b3f5cb1f37df24b3008ba72e0e557a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6806",
+      "prompt_tokens": 73,
+      "role": "calibration",
+      "source_row_id": "6806",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "854af02bc71326462a1b8e6a046609dd25cc18cc7f22f449926f91e160cb6579"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4160",
+      "prompt_tokens": 76,
+      "role": "calibration",
+      "source_row_id": "4160",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8b91bf4fe9acb2525376fd6e59cde06fc1dd1142c5c4539416537e39c91605da"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6578",
+      "prompt_tokens": 59,
+      "role": "calibration",
+      "source_row_id": "6578",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "b9219bb3b4797795fe7ab2134318017577ed83ab502b1a1b35cf2d06760e327c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6063",
+      "prompt_tokens": 86,
+      "role": "calibration",
+      "source_row_id": "6063",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "02e28d73173d0a572ecbbc04bd1c29394670c2a4c3781d2d7d36eee5c5f80191"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1674",
+      "prompt_tokens": 69,
+      "role": "calibration",
+      "source_row_id": "1674",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "2683b080c58671fbe70c6ba4499f03167a825652af878596d4d770eaffe62b3b"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_4646",
+      "prompt_tokens": 80,
+      "role": "calibration",
+      "source_row_id": "4646",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "9d531596c0ec68a9afa8f810aab37841d9c7c7c350242c42c9462ac10b864327"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_301",
+      "prompt_tokens": 95,
+      "role": "calibration",
+      "source_row_id": "301",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "99b1357c57ba7b1364e5cff3f420757d42d5f1c8032d75e420e98309be8267d6"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6196",
+      "prompt_tokens": 117,
+      "role": "calibration",
+      "source_row_id": "6196",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "4bc05c6c25c644776dd36ccacf07c5cfb95f3e91d797146ffa2f4eb1ba2fb277"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5222",
+      "prompt_tokens": 76,
+      "role": "calibration",
+      "source_row_id": "5222",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "0c4535db785de420290e010cc69289c20965160727e8acc6f447070270780f9f"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_6410",
+      "prompt_tokens": 111,
+      "role": "calibration",
+      "source_row_id": "6410",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6ac0c14d629dd24c714306fa3b53867d3fa7458bc4811ed5164d0ed15583434c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7328",
+      "prompt_tokens": 128,
+      "role": "calibration",
+      "source_row_id": "7328",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "d5ef8016dec3fff9aafee7c734cea1b7a3c08c6fc9f59a3958ae2c9afebcd758"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7022",
+      "prompt_tokens": 88,
+      "role": "calibration",
+      "source_row_id": "7022",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "de5bac8564d17e5238eea356fdd3d4dba26e4c853e30736c4b35640647507f68"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3688",
+      "prompt_tokens": 57,
+      "role": "calibration",
+      "source_row_id": "3688",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "e0bd1e24cd85aa32257c6e79364a40606c3135d6f1d5e73932b64876152cc924"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3747",
+      "prompt_tokens": 86,
+      "role": "calibration",
+      "source_row_id": "3747",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "907de2ed9f6e128d75ad96292ab5109e36e324070cffc10713a8da99e84a9d3d"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3614",
+      "prompt_tokens": 90,
+      "role": "calibration",
+      "source_row_id": "3614",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "690259692410b00c615566b79433b6fa68534c2db0931062b1d357a42c0e6853"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5104",
+      "prompt_tokens": 110,
+      "role": "calibration",
+      "source_row_id": "5104",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "7d2ac6658ee2f479f54d5371799f94ba6ca51d526477be1e800055da71a128ab"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_7463",
+      "prompt_tokens": 77,
+      "role": "calibration",
+      "source_row_id": "7463",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "e67352f33ffa7cf2c47c4263c96b8088bf0849347b4f2ed90e4b8c358a266fda"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3217",
+      "prompt_tokens": 87,
+      "role": "calibration",
+      "source_row_id": "3217",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "6bb07adfd0f0796ce1cea40d901bc001416d040ec35bf365d8f4a6d065e2e3da"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5934",
+      "prompt_tokens": 105,
+      "role": "calibration",
+      "source_row_id": "5934",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "1f51f597eda4c545c3d703a00c082baabe789e9e18e8119d4ca4622bf271c69a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_5754",
+      "prompt_tokens": 179,
+      "role": "calibration",
+      "source_row_id": "5754",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "8efdab35536154d3dfb325e9f79773ebdd53c802e2f03ec09e75a5e499e5cd2a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_3942",
+      "prompt_tokens": 84,
+      "role": "calibration",
+      "source_row_id": "3942",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "a2afbc0118c68a030275452eee43473029db38b65f4eb6c6bc67c464b07a546e"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_calibration_1290",
+      "prompt_tokens": 63,
+      "role": "calibration",
+      "source_row_id": "1290",
+      "split": "train",
+      "target_tokens": null,
+      "token_sha256": "c9ead766f28350743e8ea1e5181e77857c94e70d0e3a10eeb2bd0597d8722c00"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_723",
+      "prompt_tokens": 73,
+      "role": "heldout",
+      "source_row_id": "723",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b67ba462183f5700515ec53c4b2624fef6ff86fd48ef41ac7b5c67f33d9a571c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_224",
+      "prompt_tokens": 87,
+      "role": "heldout",
+      "source_row_id": "224",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2ddf7e8f4fac0415acea912eaed905e1f6e438e6fea0f074f9c9220bf2bdac58"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1275",
+      "prompt_tokens": 95,
+      "role": "heldout",
+      "source_row_id": "1275",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c4834b1ea775fdc919816afad86a23d96b967ad7c308e2caa5d11af7ee0e01e3"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_670",
+      "prompt_tokens": 72,
+      "role": "heldout",
+      "source_row_id": "670",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "35d70f1d6fdcf397235d704fddf8f9b34cb6328acf2b31991ca8ea3e7b10d60a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_927",
+      "prompt_tokens": 96,
+      "role": "heldout",
+      "source_row_id": "927",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6378014e5ffcff116f85dc6f5244c2b173299fd7d79203567e340c0119d84356"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_139",
+      "prompt_tokens": 68,
+      "role": "heldout",
+      "source_row_id": "139",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b285e1a6241af207c48ce63426d522c6fcb1851c45d11e380332464100861808"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_820",
+      "prompt_tokens": 84,
+      "role": "heldout",
+      "source_row_id": "820",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "4c5c9430429f09f1c75f1c694b55a6ac1a6320d9039cc97138f525144a6c2040"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_954",
+      "prompt_tokens": 66,
+      "role": "heldout",
+      "source_row_id": "954",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e8b0bd18b185480288c174fd6b56d13278c24238e99bd825df77e21b2314cc7d"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1143",
+      "prompt_tokens": 53,
+      "role": "heldout",
+      "source_row_id": "1143",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "3afc05fac6de12323a33f3006c8c91e60081d8b26086edfacb17223e629838bd"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1250",
+      "prompt_tokens": 67,
+      "role": "heldout",
+      "source_row_id": "1250",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "eeff6b0c42e6c1d8d290316f783f9f10624c59fc48ba8a8801606ae0edfdbdd6"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_191",
+      "prompt_tokens": 59,
+      "role": "heldout",
+      "source_row_id": "191",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "badab401d9b0772072ff6a44bb4b51b0a7091030e79d86f7b36a1551a0ae25d1"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_892",
+      "prompt_tokens": 80,
+      "role": "heldout",
+      "source_row_id": "892",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "4272a4386eff0397acced2da820ff98d48bebe49d327cc025dc318f79451c15a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_667",
+      "prompt_tokens": 65,
+      "role": "heldout",
+      "source_row_id": "667",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "dab05b439ac795085201c10fa67c27711d2a582a9fa736f46d7dfc295b216c8c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_10",
+      "prompt_tokens": 82,
+      "role": "heldout",
+      "source_row_id": "10",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6087282905a0a918695f63dd0ac2db36983e338ecb9569019b10fd1c4faf8a5f"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1084",
+      "prompt_tokens": 62,
+      "role": "heldout",
+      "source_row_id": "1084",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6a472bea83941e773772deffaf2514ead15c2b207162c13e8ba699eee3a2ad35"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_80",
+      "prompt_tokens": 57,
+      "role": "heldout",
+      "source_row_id": "80",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e86f6388c588d82280169d88866ac8e14abc00695f40f0a9002dd1a9361c1b0a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1194",
+      "prompt_tokens": 76,
+      "role": "heldout",
+      "source_row_id": "1194",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "4871cc0e6be4c24d9d45cb5ec5b6fe32cae510c277dd81d34f1ba727d71452c7"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1189",
+      "prompt_tokens": 69,
+      "role": "heldout",
+      "source_row_id": "1189",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "19adc8589d29db4c27aa870319357daa87b7812d8364eece7e8f2deafe9e9741"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_238",
+      "prompt_tokens": 61,
+      "role": "heldout",
+      "source_row_id": "238",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "88e8868e9ad20af2f91ec0d09033b7e55505b8e382058356e370223bba316c4f"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_647",
+      "prompt_tokens": 80,
+      "role": "heldout",
+      "source_row_id": "647",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "8ca8a5643e30e2757a936746011d2acfbd11bf0a129d5fc98035c578b6bc71c7"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1066",
+      "prompt_tokens": 63,
+      "role": "heldout",
+      "source_row_id": "1066",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "519d8a238332ce5c12bf32f7b7b40959abe951f74b69278e1d9765f1cfd9590b"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_403",
+      "prompt_tokens": 90,
+      "role": "heldout",
+      "source_row_id": "403",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "3863f6265af8984ca261b347a89e76ce3c9139af3bbac9945a5fe27b81f01cf0"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_251",
+      "prompt_tokens": 59,
+      "role": "heldout",
+      "source_row_id": "251",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "23c1e4630151f70d350d96b8dbe27d3b33327d6b7d1bcddc387c7aea1ea9b49a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_713",
+      "prompt_tokens": 65,
+      "role": "heldout",
+      "source_row_id": "713",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f96068359f721a73e8d913b0c106c53ce00195d63783102d24bcf2d0ff192fc8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_873",
+      "prompt_tokens": 68,
+      "role": "heldout",
+      "source_row_id": "873",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "caf2a6e3d340ddc481a1e902f35b674fe41ff3d892af36b7beb001d7edaa3831"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_400",
+      "prompt_tokens": 58,
+      "role": "heldout",
+      "source_row_id": "400",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "586e5391bfde81fda788fcab4e2edfa906c1d6bea017958cbb75e4ac5765e483"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_477",
+      "prompt_tokens": 68,
+      "role": "heldout",
+      "source_row_id": "477",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "43f442a06250c136542f855020d35ebf57a245ae67311006a411968ccbd1095f"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_694",
+      "prompt_tokens": 75,
+      "role": "heldout",
+      "source_row_id": "694",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6ee9fa038d7114d7abb8b548133c51d7e5d44c7ca29de102a29bdaa4a4be39db"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_979",
+      "prompt_tokens": 72,
+      "role": "heldout",
+      "source_row_id": "979",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "6a88a823701bcba932b73111199e267a90c4d65c51b78c54b6b5a3d424eded83"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_978",
+      "prompt_tokens": 55,
+      "role": "heldout",
+      "source_row_id": "978",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e06bca470fc58255f0f8c397894014f74b669ad82dc8701d80287db368f1c0d1"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_716",
+      "prompt_tokens": 85,
+      "role": "heldout",
+      "source_row_id": "716",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "b98851ea0fc423e2871d254af1529a9b2a7f080f4e7157a67f04918ed37da3bf"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_988",
+      "prompt_tokens": 82,
+      "role": "heldout",
+      "source_row_id": "988",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c303a692f43e240e4ad8af21fa9169c42ae327413a1c05676063f3dd381443ce"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_447",
+      "prompt_tokens": 71,
+      "role": "heldout",
+      "source_row_id": "447",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "55d3c9060d77ce82ef8790f6b0fd3665d5f645de20ff92b009958059a8c88b11"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1147",
+      "prompt_tokens": 120,
+      "role": "heldout",
+      "source_row_id": "1147",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "394e02bf84cdcc1534a2d741145f4c50c39d4d5e913799fda55f5545a277e60e"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1198",
+      "prompt_tokens": 106,
+      "role": "heldout",
+      "source_row_id": "1198",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a74b9446856c922f5a77ed07c2596da0a3c6a09c3064537d2e99af267a72a4a0"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1144",
+      "prompt_tokens": 75,
+      "role": "heldout",
+      "source_row_id": "1144",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "e3114a54920e36dd856bbbf47e6be7ad12cfc95100684a8dda95195d33e36e73"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_992",
+      "prompt_tokens": 95,
+      "role": "heldout",
+      "source_row_id": "992",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c9dedee515da11227647e9392eae5bcabb61a2408588a611c978c6cde2c831f0"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_612",
+      "prompt_tokens": 102,
+      "role": "heldout",
+      "source_row_id": "612",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "490181db9073d5120bf7221ae49d00ae383ec1e20894eb5ef3f68f12fb26682c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_499",
+      "prompt_tokens": 130,
+      "role": "heldout",
+      "source_row_id": "499",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f27759a8443f9be62dc928a4989877e050ecb6813130ed409653bd64027e80f4"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_451",
+      "prompt_tokens": 84,
+      "role": "heldout",
+      "source_row_id": "451",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "4dd40f021e8c6dc43159f557f683fd5a842c38e7b711b0aaae4f3625cf2eab48"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_416",
+      "prompt_tokens": 75,
+      "role": "heldout",
+      "source_row_id": "416",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "263f25ed4549d6a56d7299d593253f4101cdaeb82a4b63db44ba2689e4064f5a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_368",
+      "prompt_tokens": 52,
+      "role": "heldout",
+      "source_row_id": "368",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "9d23765449efb0d6f432e996b870d9e1661dc63571493442a11f6e379e145ac5"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_230",
+      "prompt_tokens": 83,
+      "role": "heldout",
+      "source_row_id": "230",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f241445a383040b6c4942870d9124dd62649929734c83cdbcffe3e690b2fce12"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_885",
+      "prompt_tokens": 76,
+      "role": "heldout",
+      "source_row_id": "885",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "a344bc56e5cb90c66f3fe2095a211d98488967408e4b6447c09cca8e235c7cf6"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_756",
+      "prompt_tokens": 76,
+      "role": "heldout",
+      "source_row_id": "756",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f7ab2dbd00c3cf66d8a9d3bb42dc3115d4029d364067a28f33d1db7cf234f5a9"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_129",
+      "prompt_tokens": 85,
+      "role": "heldout",
+      "source_row_id": "129",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "326f276248d4aed7ee1fcc6e30f325e9cbedc01b69a204f9906e6ce097a0d138"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_523",
+      "prompt_tokens": 85,
+      "role": "heldout",
+      "source_row_id": "523",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bb26bf5bce9c249206275fa648c741c4092e450856bcbe8a05049429ceccfec7"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_296",
+      "prompt_tokens": 68,
+      "role": "heldout",
+      "source_row_id": "296",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "9deb2dc9df27d93c7535878a2e53699b3bfac21b5326f84affbdb63c94d4ef13"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_632",
+      "prompt_tokens": 93,
+      "role": "heldout",
+      "source_row_id": "632",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2eaf7abec45cea220bb727fdc895a343708b2298b6c98b2e2b930d2881c2518a"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_183",
+      "prompt_tokens": 156,
+      "role": "heldout",
+      "source_row_id": "183",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "37385d18202e6ae8d438253d30e720cc7a66ddad649b67432a1a84a8da69db79"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_405",
+      "prompt_tokens": 116,
+      "role": "heldout",
+      "source_row_id": "405",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d8f87b6b297f1b1fbca14eeca422d2043246d5eb359b109cd42320bcc6d44655"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_377",
+      "prompt_tokens": 97,
+      "role": "heldout",
+      "source_row_id": "377",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "12b995d2906db804de6bc88d114303caf0381f84b3cd467193b1474acc1f7a51"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_788",
+      "prompt_tokens": 73,
+      "role": "heldout",
+      "source_row_id": "788",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "cc03c856ea2425152cb5d2e0a10a8ff48073edcd91e2e553c90c5c3bd590a06c"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_896",
+      "prompt_tokens": 71,
+      "role": "heldout",
+      "source_row_id": "896",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "25d749e9a9bf82adf745b7a6ad2f7cf33d1455a379b34d7253cb4647b49a9aa5"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_996",
+      "prompt_tokens": 91,
+      "role": "heldout",
+      "source_row_id": "996",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "2652fed261cf907c3b55e26a227b8d6bb23c2920af68d99b5083ad526a3ae4f2"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_946",
+      "prompt_tokens": 66,
+      "role": "heldout",
+      "source_row_id": "946",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "055c8e1867b1760e8cbb15a75c9c5011f48a22d9fc4f8c979bd885fa3356a79d"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_771",
+      "prompt_tokens": 83,
+      "role": "heldout",
+      "source_row_id": "771",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "d1a2100ccaeaeb63afc75808acd161a014f651ea9dde5c063faee295eca4dee5"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_842",
+      "prompt_tokens": 61,
+      "role": "heldout",
+      "source_row_id": "842",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "eaef96ae6734f8214bc6d6194d94fb4cdac00d5796a6ad70f0e7015232a837c8"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1140",
+      "prompt_tokens": 71,
+      "role": "heldout",
+      "source_row_id": "1140",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "5fa3fb24359b7cdcd73709efe760cbe16d8cbcb26b13f751ee8cb5b0aee0091f"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_352",
+      "prompt_tokens": 65,
+      "role": "heldout",
+      "source_row_id": "352",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "f2552f96f506fb5207f43558772ec49d58bde591cdc5da2762a2702d6e6e52a7"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_882",
+      "prompt_tokens": 136,
+      "role": "heldout",
+      "source_row_id": "882",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "47c4191eefa37bf60c76d7b848f7143bdaf5b0d4fa861ce84cf56522876dd1fa"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_225",
+      "prompt_tokens": 79,
+      "role": "heldout",
+      "source_row_id": "225",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "c48c2938e19da139cbfd1106b5e514e1ac560289ec5410061b9014fc121863c4"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1312",
+      "prompt_tokens": 70,
+      "role": "heldout",
+      "source_row_id": "1312",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "04f21a02c91b0f8ce7948592752195214c01f2e2bee406a7271fb3a3edcce259"
+    },
+    {
+      "dataset": "gsm8k",
+      "prompt_id": "gsm8k_heldout_1163",
+      "prompt_tokens": 58,
+      "role": "heldout",
+      "source_row_id": "1163",
+      "split": "test",
+      "target_tokens": null,
+      "token_sha256": "bf9c97a59be468c7fcc024badb49b1136fe23ea658cdf5fe5b1918ad0b0f1dc9"
+    }
+  ],
+  "schema_version": 1,
+  "selection_recipe": "Sort rows by SHA-256 of (revision + split + stable_row_id), then take the required count. GSM8K has no stable row id, so source order at the locked revision is used.",
+  "source": {
+    "commit": "d94f4b869e0effc6eeeee43992efff4f0dc71a7d",
+    "dirty": false,
+    "source_sha256": "4ce0021dc593662d2bb6399faf54578ddd9d6bf44765e777f08cc8031932926c"
+  },
+  "workload_sha256": "402efe2d5f2168c9c36e52ddd6e87c4c4658f4adfcf8068f31e16cd100795d36"
+}
