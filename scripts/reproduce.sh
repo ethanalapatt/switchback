@@ -7,6 +7,9 @@
 #   smoke  cpu gate plus the GPU model gate and the small smoke benchmark
 #   full   cpu gate plus the GPU model gate and the complete primary matrix
 #
+# Environment: set BENCH_MAX_SECONDS to cap one unattended stretch of the
+# benchmark. The run is resumable, so rerunning the same command continues it.
+#
 # Exit codes: 0 every requested stage ran and passed; 1 a stage failed;
 # 3 the preset is not fully implemented yet and reported INCOMPLETE.
 # A stage that is not implemented is never reported as a pass.
@@ -87,24 +90,35 @@ if [[ "$PRESET" != "cpu" ]]; then
     run "gpu tests"        "$PYTHON" -m pytest -m gpu -q
 
     case "$PRESET" in
-        smoke)
-            run "baseline pilot" "$PYTHON" -m switchback pilot \
-                --max-new-tokens 32 --repeats 3 --out artifacts/pilot/pilot.json
-            not_implemented "smoke benchmark (bench.run --config configs/smoke.toml)" "M7"
-            not_implemented "report rendering (scripts/render_results.py)" "M7"
-            ;;
-        full)
-            not_implemented "workload preparation (bench.prepare)" "M7"
-            not_implemented "calibration (bench.calibrate)" "M6"
-            not_implemented "primary benchmark (bench.run)" "M7"
-            not_implemented "evidence validation (bench.validate)" "M7"
-            not_implemented "report rendering (scripts/render_results.py)" "M7"
-            ;;
-        *)
-            echo "unknown preset: ${PRESET}" >&2
-            exit 2
-            ;;
+        smoke)  CONFIG=configs/smoke.toml;   RUN_DIR=artifacts/runs/smoke ;;
+        full)   CONFIG=configs/primary.toml; RUN_DIR=artifacts/runs/primary ;;
+        *)      echo "unknown preset: ${PRESET}" >&2; exit 2 ;;
     esac
+
+    run "workload preparation" "$PYTHON" -m bench.prepare --config "$CONFIG"
+    run "controller calibration" "$PYTHON" -m switchback calibrate \
+        --local-files-only --out artifacts/calibration.json
+    run "validation evidence" "$PYTHON" -m switchback evidence --gpu \
+        --artifact artifacts/environment.json \
+        --artifact artifacts/calibration.json \
+        --out artifacts/evidence.json
+
+    # The benchmark is resumable: rerun the same command to continue an
+    # interrupted run. --max-seconds caps one unattended stretch.
+    run "benchmark" "$PYTHON" -m bench.run --config "$CONFIG" --out "$RUN_DIR" \
+        ${BENCH_MAX_SECONDS:+--max-seconds "$BENCH_MAX_SECONDS"}
+    run "evidence validation" "$PYTHON" -m bench.validate "$RUN_DIR" --config "$CONFIG"
+    run "report rendering" "$PYTHON" scripts/render_results.py "$RUN_DIR" \
+        --out "$RUN_DIR/report.md"
+
+    if [[ "$PRESET" == "full" ]]; then
+        run "publish RESULTS.md" "$PYTHON" scripts/render_results.py "$RUN_DIR" \
+            --out RESULTS.md
+    else
+        echo
+        echo "=== RESULTS.md"
+        echo "--- SKIP: the smoke preset is preliminary and never becomes RESULTS.md"
+    fi
 fi
 
 echo
