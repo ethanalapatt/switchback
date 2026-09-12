@@ -1,0 +1,123 @@
+{
+  "data_kind": "measured",
+  "diagnostics": {
+    "blocks_observed": 86,
+    "completion_lengths": [
+      28,
+      96,
+      31,
+      96,
+      28,
+      96,
+      31,
+      96
+    ],
+    "draft_forward_ns": {
+      "1": {
+        "count": 24,
+        "max_ns": 14553923,
+        "median_ns": 12162934.0,
+        "min_ns": 11490220
+      }
+    },
+    "draft_prefill_ns": {
+      "35": {
+        "count": 8,
+        "max_ns": 16134935,
+        "median_ns": 14589083.5,
+        "min_ns": 13522176
+      }
+    },
+    "gamma": 8,
+    "prompts": 4,
+    "repeats": 2,
+    "target_forward_ns": {
+      "1": {
+        "count": 24,
+        "max_ns": 58030667,
+        "median_ns": 53502888.0,
+        "min_ns": 50106936
+      },
+      "2": {
+        "count": 24,
+        "max_ns": 51652524,
+        "median_ns": 47866403.0,
+        "min_ns": 45454941
+      },
+      "3": {
+        "count": 24,
+        "max_ns": 51022698,
+        "median_ns": 48390284.0,
+        "min_ns": 44692508
+      },
+      "5": {
+        "count": 24,
+        "max_ns": 49161862,
+        "median_ns": 46926304.5,
+        "min_ns": 44419066
+      },
+      "9": {
+        "count": 24,
+        "max_ns": 110036168,
+        "median_ns": 47181337.0,
+        "min_ns": 44768012
+      }
+    }
+  },
+  "disclaimer": "Cost tables fitted from calibration prompts only. The microbenchmark synchronizes around every forward call, so these are model inputs, not latency results.",
+  "generated_at": "2026-09-12T10:50:37+00:00",
+  "is_benchmark_result": false,
+  "kind": "calibration",
+  "notes": "Milestone 6. Pilot prompts stand in for the locked calibration split until bench.prepare lands in M7. In-sample for the controller check that follows.",
+  "profile": {
+    "acceptance": {
+      "successes": [
+        68,
+        64,
+        58,
+        56,
+        54,
+        46,
+        38,
+        36
+      ],
+      "trials": [
+        76,
+        68,
+        62,
+        58,
+        56,
+        52,
+        46,
+        36
+      ]
+    },
+    "actions": [
+      0,
+      1,
+      2,
+      4,
+      8
+    ],
+    "calibration_source": "4 calibration prompts x 2 repeat(s), gamma=8, max_new_tokens=96",
+    "cost": {
+      "block_overhead_ns": 8283806.5,
+      "draft_forward_ns": 12162934.0,
+      "draft_prefill_ns": 14589083.5,
+      "median_remaining_tokens": 63.5,
+      "target_forward_ns": {
+        "1": 53502888.0,
+        "2": 47866403.0,
+        "3": 48390284.0,
+        "5": 46926304.5,
+        "9": 47181337.0
+      }
+    },
+    "ewma_alpha": 0.2,
+    "margin": 0.05,
+    "schema_version": 1,
+    "source_commit": "91ea97d3620def47d5196c3a735f3ceaccc3f3e5"
+  },
+  "profile_sha256": "b3f6a4c569380df8c123f5dde09ae610adf269892a79c71318dd8f457573e286",
+  "schema_version": 1
+}
