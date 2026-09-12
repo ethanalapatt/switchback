@@ -1,95 +1,119 @@
 {
   "data_kind": "measured",
   "diagnostics": {
-    "blocks_observed": 86,
+    "blocks_observed": 387,
     "completion_lengths": [
+      37,
       28,
-      96,
-      31,
-      96,
       28,
+      65,
+      21,
+      50,
+      128,
+      32,
+      82,
+      51,
+      128,
+      43,
       96,
-      31,
-      96
+      98,
+      64,
+      75,
+      34,
+      128,
+      30,
+      23,
+      34,
+      37,
+      23,
+      66,
+      97,
+      128,
+      86,
+      77,
+      24,
+      98,
+      128,
+      29
     ],
     "draft_forward_ns": {
       "1": {
         "count": 24,
-        "max_ns": 14553923,
-        "median_ns": 12162934.0,
-        "min_ns": 11490220
+        "max_ns": 14718583,
+        "median_ns": 12579375.0,
+        "min_ns": 11454171
       }
     },
     "draft_prefill_ns": {
-      "35": {
+      "37": {
         "count": 8,
-        "max_ns": 16134935,
-        "median_ns": 14589083.5,
-        "min_ns": 13522176
+        "max_ns": 16286094,
+        "median_ns": 14773923.5,
+        "min_ns": 13790630
       }
     },
     "gamma": 8,
-    "prompts": 4,
-    "repeats": 2,
+    "prompts": 32,
+    "repeats": 1,
     "target_forward_ns": {
       "1": {
         "count": 24,
-        "max_ns": 58030667,
-        "median_ns": 53502888.0,
-        "min_ns": 50106936
+        "max_ns": 55445615,
+        "median_ns": 51626808.5,
+        "min_ns": 49569642
       },
       "2": {
         "count": 24,
-        "max_ns": 51652524,
-        "median_ns": 47866403.0,
-        "min_ns": 45454941
+        "max_ns": 51209887,
+        "median_ns": 46383989.0,
+        "min_ns": 45116025
       },
       "3": {
         "count": 24,
-        "max_ns": 51022698,
-        "median_ns": 48390284.0,
-        "min_ns": 44692508
+        "max_ns": 50523005,
+        "median_ns": 46984367.5,
+        "min_ns": 45253401
       },
       "5": {
         "count": 24,
-        "max_ns": 49161862,
-        "median_ns": 46926304.5,
-        "min_ns": 44419066
+        "max_ns": 53013798,
+        "median_ns": 48522389.0,
+        "min_ns": 45093064
       },
       "9": {
         "count": 24,
-        "max_ns": 110036168,
-        "median_ns": 47181337.0,
-        "min_ns": 44768012
+        "max_ns": 114969197,
+        "median_ns": 49139399.5,
+        "min_ns": 46083116
       }
     }
   },
   "disclaimer": "Cost tables fitted from calibration prompts only. The microbenchmark synchronizes around every forward call, so these are model inputs, not latency results.",
-  "generated_at": "2026-09-12T10:50:37+00:00",
+  "generated_at": "2026-09-12T11:29:11+00:00",
   "is_benchmark_result": false,
   "kind": "calibration",
-  "notes": "Milestone 6. Pilot prompts stand in for the locked calibration split until bench.prepare lands in M7. In-sample for the controller check that follows.",
+  "notes": "Milestone 7. Fitted on 32 prompts from the locked MBPP/GSM8K train calibration split. No held-out prompt was used.",
   "profile": {
     "acceptance": {
       "successes": [
-        68,
-        64,
-        58,
-        56,
-        54,
-        46,
-        38,
-        36
+        315,
+        274,
+        246,
+        215,
+        195,
+        172,
+        156,
+        133
       ],
       "trials": [
-        76,
-        68,
-        62,
-        58,
-        56,
-        52,
-        46,
-        36
+        354,
+        309,
+        272,
+        241,
+        211,
+        192,
+        169,
+        152
       ]
     },
     "actions": [
@@ -99,25 +123,25 @@
       4,
       8
     ],
-    "calibration_source": "4 calibration prompts x 2 repeat(s), gamma=8, max_new_tokens=96",
+    "calibration_source": "32 calibration prompts x 1 repeat(s), gamma=8, max_new_tokens=128",
     "cost": {
-      "block_overhead_ns": 8283806.5,
-      "draft_forward_ns": 12162934.0,
-      "draft_prefill_ns": 14589083.5,
-      "median_remaining_tokens": 63.5,
+      "block_overhead_ns": 2823081.5,
+      "draft_forward_ns": 12579375.0,
+      "draft_prefill_ns": 14773923.5,
+      "median_remaining_tokens": 57.5,
       "target_forward_ns": {
-        "1": 53502888.0,
-        "2": 47866403.0,
-        "3": 48390284.0,
-        "5": 46926304.5,
-        "9": 47181337.0
+        "1": 51626808.5,
+        "2": 46383989.0,
+        "3": 46984367.5,
+        "5": 48522389.0,
+        "9": 49139399.5
       }
     },
     "ewma_alpha": 0.2,
     "margin": 0.05,
     "schema_version": 1,
-    "source_commit": "91ea97d3620def47d5196c3a735f3ceaccc3f3e5"
+    "source_commit": "bf3d61fd00ecb8096a0ae2cc9d97f232729e0c6a"
   },
-  "profile_sha256": "b3f6a4c569380df8c123f5dde09ae610adf269892a79c71318dd8f457573e286",
+  "profile_sha256": "69983f0c01b7bbe3e7141ba6d3c0a3ea595892e901ce5b81252b6f33b71338e7",
   "schema_version": 1
 }

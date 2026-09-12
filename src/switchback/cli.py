@@ -435,7 +435,27 @@ def command_calibrate(args: argparse.Namespace) -> int:
         vocab_size=draft.logits_vocab_size,
         name="draft",
     )
-    prompts = [_render(target.tokenizer, text) for text in PILOT_PROMPTS]
+    if args.workload is not None:
+        # Calibrate on the locked calibration split, never on held-out prompts.
+        workload = json.loads(args.workload.read_text(encoding="utf-8"))
+        token_ids = json.loads(
+            args.workload.with_name(args.workload.name.replace(".json", ".tokens.json")).read_text(
+                encoding="utf-8"
+            )
+        )["prompt_token_ids"]
+        calibration_ids = [
+            token_ids[entry["prompt_id"]]
+            for entry in workload["prompts"]
+            if entry["role"] == "calibration"
+        ]
+        if not calibration_ids:
+            print(f"{args.workload} has no calibration prompts", file=sys.stderr)
+            return 2
+        prompts = calibration_ids[: args.max_prompts] if args.max_prompts else calibration_ids
+        print(f"  calibrating on {len(prompts)} locked calibration prompts")
+    else:
+        prompts = [_render(target.tokenizer, text) for text in PILOT_PROMPTS]
+        print(f"  calibrating on {len(prompts)} pilot prompts (not a locked split)")
     profile, diagnostics = calibrate(
         target_adapter,
         draft_adapter,
@@ -730,6 +750,18 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--max-new-tokens", type=int, default=96)
     calibrate.add_argument("--gamma", type=int, default=8)
     calibrate.add_argument("--repeats", type=int, default=2)
+    calibrate.add_argument(
+        "--workload",
+        type=Path,
+        default=None,
+        help="locked workload file; uses its calibration split instead of the pilot prompts",
+    )
+    calibrate.add_argument(
+        "--max-prompts",
+        type=int,
+        default=None,
+        help="cap how many calibration prompts are used, for a faster fit",
+    )
     calibrate.add_argument("--notes", default="")
     calibrate.add_argument("--out", type=Path, default=Path("artifacts/calibration.json"))
     calibrate.set_defaults(handler=command_calibrate)
