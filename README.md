@@ -144,6 +144,49 @@ bash scripts/reproduce.sh --preset full          # the primary matrix, ~7.7 hour
 `bench.run` is resumable: set `BENCH_MAX_SECONDS` to cap one unattended stretch
 and rerun the same command to continue.
 
+## Reading a trace
+
+Every request can save a compact block trace, and `viewer/index.html` opens one
+with no server, no network and no inference. It is static HTML, CSS and
+JavaScript; open the file and pick a trace, or click the bundled real example.
+
+```bash
+python -m switchback trace --gamma 4 --out artifacts/traces/greedy_g4.jsonl
+python -m switchback replay artifacts/traces/greedy_g4.jsonl   # same check, in the terminal
+```
+
+The viewer shows, per block: which candidates the draft proposed, which the
+target accepted, where the first rejection landed, the token the target
+substituted, both cache lengths after the crop, the block's duration, and the
+controller's own reason when it bypassed. It **re-derives** the pending-token
+convention from the trace rather than trusting it, so an inconsistent trace is
+reported as inconsistent instead of drawn anyway. That check is deliberately
+implemented twice — once in
+[`src/switchback/traces.py`](src/switchback/traces.py) and once in
+[`viewer/viewer.js`](viewer/viewer.js) — and
+[a test](tests/unit/test_viewer.py) drives both and requires them to agree.
+
+## Why not always speculate?
+
+Because drafting is not free, and on this hardware the arithmetic is close.
+From the measured profile in `artifacts/profile/` and `artifacts/calibration.json`:
+
+- A target forward costs about **46–52 ms** whether it verifies 1 token or 9.
+  Verification width is nearly free, which is what makes speculation possible
+  at all. (A single-token forward is actually the *most* expensive of them, by
+  about 10%.)
+- A draft forward costs about **12.5 ms**. So a draft length of 4 spends ~50 ms
+  of draft time to save at most 3 target calls.
+- When every candidate is accepted, the draft is one token behind and needs a
+  **catch-up forward**, another 12.5 ms, on most blocks.
+
+So `g=8` costs roughly `8 × 12.5 + 47 + 12.5 ≈ 160 ms` and commits at most 9
+tokens. Target-only commits 1 token for ~52 ms. Speculation wins only while
+acceptance stays high enough that the expected token count justifies the draft
+time — and acceptance falls with position. That break-even is exactly what
+[`src/switchback/controller.py`](src/switchback/controller.py) estimates before
+each block, and why the action set includes `0`.
+
 ## Known limitations
 
 - **No benchmark has run.** Milestones 6–8 are unimplemented: sampled
