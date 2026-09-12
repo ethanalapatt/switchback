@@ -1,6 +1,6 @@
 {
   "config_name": "natural",
-  "config_sha256": "c1b59de3368374277fa94f05465882871a6118e8edf6bcdaf8b74a880e3e1be1",
+  "config_sha256": "c6af76d6a219c70f5760430fad3b1e7348851e80a51bf9048a08dc1f45a3847d",
   "datasets": {
     "gsm8k": {
       "config": "main",
@@ -15,7 +15,7 @@
       "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c"
     }
   },
-  "generated_at": "2026-09-12T11:25:41+00:00",
+  "generated_at": "2026-09-12T20:15:13+00:00",
   "prompts": [
     {
       "dataset": "mbpp",
@@ -2581,9 +2581,9 @@
   "schema_version": 1,
   "selection_recipe": "Sort rows by SHA-256 of (revision + split + stable_row_id), then take the required count. GSM8K has no stable row id, so source order at the locked revision is used.",
   "source": {
-    "commit": "d94f4b869e0effc6eeeee43992efff4f0dc71a7d",
+    "commit": "a424918eff10e62286fb2a20cc96dd08f344287c",
     "dirty": false,
-    "source_sha256": "4ce0021dc593662d2bb6399faf54578ddd9d6bf44765e777f08cc8031932926c"
+    "source_sha256": "877d3f0c856a3dd393c1b3366a15321061835a0531915b2051653b72a42c56c0"
   },
-  "workload_sha256": "35489c496e649a9e9ee7100e39ccc540403668277bce319cfd8b6c947bd7da77"
+  "workload_sha256": "4e8ce7dddef416562c7bf1c5c2f492bbc0f1e96921a7fb00e4ec66a7f3bb37bb"
 }
