@@ -130,11 +130,120 @@ class ConformanceContractTests(unittest.TestCase):
         # One of two adaptive requests matched.
         self.assertIn("50.0%", report)
 
-    def test_a_gap_beyond_the_bound_is_refused(self):
+    def test_a_gap_beyond_the_bound_with_nothing_adjudicating_it_is_refused(self):
         self.manifest["max_chosen_token_gap"] = 0.5
         self.diverge(gap=15.5)
         self.write()
-        with self.assertRaisesRegex(ValueError, "not floating point"):
+        with self.assertRaisesRegex(ValueError, "nothing adjudicated it"):
+            renderer.load_run(self.root, True)
+
+    # --- adjudication (ADR 0006) -------------------------------------------
+
+    def adjudicate(self, verdict="near_tie", smallest=0.25, **overrides):
+        """Attach an adjudication for the diverging adaptive row."""
+        row = next(r for r in self.rows if r["engine"] == "adaptive")
+        item = dict(
+            {name: row[name] for name in renderer.KEY_FIELDS},
+            index=2,
+            reference_token=BASELINE_OUTPUT[2],
+            candidate_token=DIVERGED_OUTPUT[2],
+            screen_gap=15.5,
+            smallest_margin=smallest,
+            any_path_prefers_candidate=True,
+            engine_replay_margin=-0.25,
+            verdict=verdict,
+            paths=[],
+        )
+        item.update(overrides)
+        (self.root / "adjudication.jsonl").write_text(json.dumps(item) + "\n")
+        self.manifest.setdefault("files", {})
+        self.manifest["adjudication"] = {"adjudicated": 1, "unexplained": 0}
+        return item
+
+    def write_with_adjudication(self):
+        self.write()
+        self.manifest["files"]["adjudication.jsonl"] = renderer.digest(
+            self.root / "adjudication.jsonl"
+        )
+        (self.root / "manifest.json").write_text(json.dumps(self.manifest))
+
+    def test_an_adjudicated_near_tie_is_admitted(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate()
+        self.write_with_adjudication()
+        report = renderer.render(*renderer.load_run(self.root, True))
+        self.assertIn("adjudicated by recomputing", report)
+
+    def test_an_unexplained_adjudication_is_still_refused(self):
+        """Adjudication may explain a divergence. It may never suppress one."""
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate(verdict="unexplained", smallest=9.0)
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "adjudicated unexplained"):
+            renderer.load_run(self.root, True)
+
+    def test_a_near_tie_verdict_must_agree_with_its_own_margin(self):
+        """A verdict that contradicts the number beside it is not evidence."""
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate(verdict="near_tie", smallest=7.0)
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "still exceeds the bound"):
+            renderer.load_run(self.root, True)
+
+    def test_an_adjudication_for_a_different_position_does_not_apply(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate(index=0)
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "nothing adjudicated it"):
+            renderer.load_run(self.root, True)
+
+    def test_an_adjudication_for_a_different_engine_does_not_apply(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate(engine="hf_ar")
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "nothing adjudicated it"):
+            renderer.load_run(self.root, True)
+
+    def test_a_tampered_adjudication_file_is_refused(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate()
+        self.write_with_adjudication()
+        with (self.root / "adjudication.jsonl").open("a") as stream:
+            stream.write("\n")
+        with self.assertRaisesRegex(ValueError, "Integrity mismatch for adjudication"):
+            renderer.load_run(self.root, True)
+
+    def test_a_missing_adjudication_file_is_refused(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate()
+        self.write_with_adjudication()
+        (self.root / "adjudication.jsonl").unlink()
+        with self.assertRaisesRegex(ValueError, "but it is missing"):
+            renderer.load_run(self.root, True)
+
+    def test_an_unknown_verdict_is_refused(self):
+        self.manifest["max_chosen_token_gap"] = 0.5
+        self.diverge(gap=15.5)
+        self.adjudicate(verdict="probably fine")
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "Unknown adjudication verdict"):
+            renderer.load_run(self.root, True)
+
+    def test_adjudication_cannot_rescue_a_mismatch_with_no_evidence(self):
+        """The row must still carry its own divergence record."""
+        self.manifest["max_chosen_token_gap"] = 0.5
+        row = self.diverge(gap=15.5)
+        del row["greedy_divergence"]
+        self.adjudicate()
+        self.write_with_adjudication()
+        with self.assertRaisesRegex(ValueError, "no recorded divergence evidence"):
             renderer.load_run(self.root, True)
 
     def test_a_mismatch_without_evidence_is_refused(self):

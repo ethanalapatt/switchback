@@ -125,6 +125,7 @@ def load_run(root, allow_fixture):
             manifest.get("files", {}).get(filename) == digest(root / filename),
             f"Integrity mismatch for {filename}",
         )
+    adjudication = load_adjudication(root, manifest)
     evidence = json.loads((root / "evidence.json").read_text())
     for name in ("passed", "oracle_passed", "cache_passed", "numerical_passed"):
         require(evidence.get(name) is True, f"Validation did not pass: {name}")
@@ -212,7 +213,7 @@ def load_run(root, allow_fixture):
             for engine, row in members.items():
                 if row["output_ids"] == reference:
                     continue
-                check_greedy_divergence(cell, engine, row, reference, bound)
+                check_greedy_divergence(cell, engine, row, reference, bound, adjudication)
     return manifest, evidence, rows
 
 
@@ -223,7 +224,40 @@ def first_difference(left, right):
     return min(len(left), len(right))
 
 
-def check_greedy_divergence(cell, engine, row, reference, bound):
+def load_adjudication(root, manifest):
+    """Verdicts on divergences the cheap screen could not explain.
+
+    Optional. When present it is hash-checked like any other raw file, and it
+    may only ever *explain* a divergence -- there is no verdict that suppresses
+    one. See docs/decisions/0006-adjudicating-greedy-divergences.md.
+    """
+    recorded = manifest.get("files", {}).get("adjudication.jsonl")
+    if recorded is None:
+        return {}
+    path = root / "adjudication.jsonl"
+    require(path.exists(), "Manifest references adjudication.jsonl but it is missing")
+    require(recorded == digest(path), "Integrity mismatch for adjudication.jsonl")
+    verdicts = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        item = json.loads(line)
+        require(
+            item.get("verdict") in {"near_tie", "unexplained"},
+            f"Unknown adjudication verdict {item.get('verdict')!r}",
+        )
+        verdicts[
+            (
+                key(item),
+                item["index"],
+                item["reference_token"],
+                item["candidate_token"],
+            )
+        ] = item
+    return verdicts
+
+
+def check_greedy_divergence(cell, engine, row, reference, bound, adjudication=None):
     """A greedy mismatch is admissible only as a documented near-tie.
 
     Greedy speculation is exact in real arithmetic, so a mismatch is either
@@ -266,10 +300,33 @@ def check_greedy_divergence(cell, engine, row, reference, bound):
         isinstance(gap, (int, float)) and gap >= 0,
         f"{label}; recorded divergence has no usable chosen_token_gap.",
     )
+    if gap <= bound:
+        return
+    # The screen measures the gap in one execution path -- an uncached
+    # recomputation from the baseline's prefix -- which is not the path either
+    # engine was in. A gap beyond the bound is therefore a question, not a
+    # verdict, and it has to be answered by an adjudication that recomputed the
+    # position under every reproducible path.
+    verdict = (adjudication or {}).get(
+        (key(row), index, divergence["reference_token"], divergence["candidate_token"])
+    )
     require(
-        gap <= bound,
+        verdict is not None,
         f"{label}; the engines chose tokens {gap} logits apart, beyond the "
-        f"declared near-tie bound of {bound}. That is not floating point.",
+        f"declared near-tie bound of {bound}, and nothing adjudicated it. "
+        f"Run bench.adjudicate before publishing a speedup.",
+    )
+    require(
+        verdict["verdict"] == "near_tie",
+        f"{label}; adjudicated {verdict['verdict']}: the smallest margin any "
+        f"reproducible path produced was {verdict['smallest_margin']}. "
+        f"That is not floating point.",
+    )
+    require(
+        isinstance(verdict.get("smallest_margin"), (int, float))
+        and verdict["smallest_margin"] <= bound,
+        f"{label}; adjudicated near_tie but its smallest margin "
+        f"{verdict.get('smallest_margin')} still exceeds the bound {bound}.",
     )
 
 
@@ -460,10 +517,23 @@ def render(manifest, evidence, rows):
             "",
             f"Every mismatch in this run was checked against a near-tie bound of "
             f"{manifest['max_chosen_token_gap']} logits between the two tokens the engines "
-            f"actually chose. A mismatch with no recorded evidence, or one beyond that bound, "
-            f"is refused rather than reported. See docs/decisions/0004-bf16-greedy-conformance.md.",
+            f"actually chose. A mismatch with no recorded evidence, or one beyond that bound "
+            f"that nothing adjudicated, is refused rather than reported. See "
+            f"docs/decisions/0004-bf16-greedy-conformance.md.",
             "",
         ]
+        adjudicated = manifest.get("adjudication")
+        if adjudicated:
+            lines += [
+                f"{adjudicated['adjudicated']} mismatch(es) exceeded that screen and were "
+                f"adjudicated by recomputing the position under every reproducible execution "
+                f"path, including a deterministic replay of the engine itself. "
+                f"{adjudicated['unexplained']} remained unexplained. The screen measures one "
+                f"path and the engines were in others, so a large screen gap is a question "
+                f"rather than a verdict. See "
+                f"docs/decisions/0006-adjudicating-greedy-divergences.md.",
+                "",
+            ]
     lines += [
         "## Limits",
         "",
