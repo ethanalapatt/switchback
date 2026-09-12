@@ -1,0 +1,227 @@
+{
+  "artifacts": [
+    "artifacts/environment.json",
+    "artifacts/model_check.json",
+    "artifacts/pilot/pilot.json",
+    "artifacts/profile/m4_profile.json",
+    "artifacts/traces/greedy_g4.jsonl",
+    "artifacts/traces/sampled_g4.jsonl"
+  ],
+  "cache_passed": true,
+  "checks": [
+    {
+      "category": "oracle",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/unit/test_oracle.py",
+        "-q"
+      ],
+      "duration_s": 1.523,
+      "name": "oracle_enumeration",
+      "passed": true,
+      "returncode": 0,
+      "tail": "......................................                                   [100%]\n38 passed in 1.19s"
+    },
+    {
+      "category": "oracle",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/unit/test_sampled_speculation.py",
+        "-q"
+      ],
+      "duration_s": 1.503,
+      "name": "sampled_speculation_enumeration",
+      "passed": true,
+      "returncode": 0,
+      "tail": "............................................................             [100%]\n60 passed in 1.11s"
+    },
+    {
+      "category": "cache",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/unit/test_cache.py",
+        "-q"
+      ],
+      "duration_s": 0.175,
+      "name": "cache_ledger",
+      "passed": true,
+      "returncode": 0,
+      "tail": ".................                                                        [100%]\n17 passed in 0.06s"
+    },
+    {
+      "category": "cache",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/unit/test_speculation_paths.py",
+        "-q"
+      ],
+      "duration_s": 1.136,
+      "name": "speculation_paths",
+      "passed": true,
+      "returncode": 0,
+      "tail": "........................................................................ [ 87%]\n..........                                                               [100%]\n82 passed in 0.75s"
+    },
+    {
+      "category": "cache",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/integration/test_cached_engine_cpu.py",
+        "-q"
+      ],
+      "duration_s": 3.948,
+      "name": "cached_engine_cpu",
+      "passed": true,
+      "returncode": 0,
+      "tail": ".............................                                            [100%]\n29 passed in 3.25s"
+    },
+    {
+      "category": "numerical",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/unit/test_sampling.py",
+        "-q"
+      ],
+      "duration_s": 0.993,
+      "name": "sampling_transforms",
+      "passed": true,
+      "returncode": 0,
+      "tail": "..................................                                       [100%]\n34 passed in 0.66s"
+    },
+    {
+      "category": "numerical",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/property",
+        "-q"
+      ],
+      "duration_s": 2.332,
+      "name": "generated_properties",
+      "passed": true,
+      "returncode": 0,
+      "tail": ".......................                                                  [100%]\n23 passed in 1.99s"
+    },
+    {
+      "category": "report",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/report",
+        "-q"
+      ],
+      "duration_s": 0.365,
+      "name": "report_integrity",
+      "passed": true,
+      "returncode": 0,
+      "tail": "..........                                                               [100%]\n10 passed in 0.24s"
+    },
+    {
+      "category": "numerical",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/integration/test_cached_engine_gpu.py",
+        "-q",
+        "-m",
+        "gpu"
+      ],
+      "duration_s": 73.088,
+      "name": "cached_engine_gpu",
+      "passed": true,
+      "returncode": 0,
+      "tail": "...........                                                              [100%]\n11 passed in 72.01s (0:01:12)"
+    },
+    {
+      "category": "cache",
+      "command": [
+        "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/integration/test_speculation_gpu.py",
+        "-q",
+        "-m",
+        "gpu"
+      ],
+      "duration_s": 107.1,
+      "name": "speculation_gpu",
+      "passed": true,
+      "returncode": 0,
+      "tail": ".....................                                                    [100%]\n21 passed in 106.03s (0:01:46)"
+    }
+  ],
+  "commands": [
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/unit/test_oracle.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/unit/test_sampled_speculation.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/unit/test_cache.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/unit/test_speculation_paths.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/integration/test_cached_engine_cpu.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/unit/test_sampling.py -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/property -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/report -q",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/integration/test_cached_engine_gpu.py -q -m gpu",
+    "/home/ethan/Desktop/switchback/Switchback_Build_Kit/.venv/bin/python -m pytest tests/integration/test_speculation_gpu.py -q -m gpu"
+  ],
+  "generated_at": "2026-09-12T10:07:58+00:00",
+  "gpu_checks_included": true,
+  "limits": "Flags record the exit codes of commands that were executed. They do not prove the acquisition code is honest, and finite-model checks do not establish equivalence for every GPU kernel. A run without GPU checks has gpu_checks_included=false and cannot satisfy a GPU gate.",
+  "measured_facts": [
+    {
+      "name": "one_step_identity_error",
+      "note": "Accepted plus residual mass equals the target exactly for every rational pair with denominator 4 over vocabularies of size 2, 3 and 4.",
+      "source": "tests/unit/test_oracle.py::test_accepted_plus_residual_mass_equals_the_target_exactly",
+      "units": "exact rational",
+      "value": 0
+    },
+    {
+      "name": "sampled_decoder_total_variation_distance",
+      "note": "The sampled decoder driven through its cache, softmax, crop and catch-up reproduces the target sequence distribution exactly. Exactness is possible because every scripted row is uniform over a subset of size 1, 2 or 4, which FP32 softmax represents without error.",
+      "source": "tests/unit/test_sampled_speculation.py::test_sampled_speculation_reproduces_the_target_distribution",
+      "units": "exact rational",
+      "value": 0
+    },
+    {
+      "name": "fp32_cache_logit_tolerance",
+      "note": "Cached versus full-prefix logits on the FP32 tiny fixture, with exact argmax agreement at chunk widths 1, 2 and 5.",
+      "source": "tests/integration/test_cached_engine_cpu.py::test_cached_logits_match_full_prefix_recomputation",
+      "units": "absolute and relative",
+      "value": 0.0001
+    },
+    {
+      "name": "bf16_cache_relative_logit_difference",
+      "note": "Measured on Qwen3-4B in BF16 on a GB10. Max absolute difference 0.73 to 1.13 against a logit scale near 50. Argmax flips on one or two rows in thirty, always at near-ties with a top-2 margin of at most 0.125.",
+      "source": "tests/integration/test_cached_engine_gpu.py::test_cached_logits_match_full_prefix_recomputation",
+      "units": "relative to max logit magnitude",
+      "value": 0.021
+    },
+    {
+      "name": "greedy_conformance",
+      "note": "Fixed greedy speculation at gamma 1, 2, 4 and 8 matches target-only decoding and hf_ar token for token at two context lengths.",
+      "source": "tests/integration/test_speculation_gpu.py::test_fixed_speculation_is_token_identical_to_target_only",
+      "units": null,
+      "value": "identical token ids"
+    }
+  ],
+  "notes": "Milestone 5. Sampled speculation connected to the GPU loop and enumerated exactly against the oracle; traces replay offline. No benchmark has run.",
+  "numerical_passed": true,
+  "oracle_passed": true,
+  "passed": true,
+  "schema_version": 1,
+  "source_commit": "dbc96ada09f3dd488d43f866b9c65d59a848903c",
+  "source_dirty": false,
+  "source_sha256": "57d824cfa84382fa34482562f1e6dbb671b130cc35da3d1d0312ce01d7a198dd"
+}
