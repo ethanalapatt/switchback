@@ -15,6 +15,11 @@ hf_cache/
 *.safetensors
 *.gguf
 
+# Tokenized prompts are a local cache of dataset content. The workload file
+# keeps their hashes, which is what pins the cohort; the text itself is not
+# redistributed here.
+artifacts/workloads/*.tokens.json
+
 # Profiler and temporary dumps
 *.pt.trace.json
 profiles/
