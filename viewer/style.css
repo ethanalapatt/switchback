@@ -1,0 +1,98 @@
+/* Offline trace viewer. No framework, no network, no build step. */
+:root {
+  color-scheme: light dark;
+  --ink: #16181d;
+  --muted: #5b6472;
+  --line: #d7dbe2;
+  --paper: #ffffff;
+  --ground: #f6f7f9;
+  --accept: #1a7f4b;
+  --accept-soft: #dff3e7;
+  --reject: #b3261e;
+  --reject-soft: #fbe1df;
+  --correct: #1f5fa8;
+  --correct-soft: #dde8f7;
+  --bypass: #8a6d1f;
+  --bypass-soft: #f7eed4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e7e9ee;
+    --muted: #99a2b2;
+    --line: #343a45;
+    --paper: #1b1e24;
+    --ground: #14161a;
+    --accept-soft: #17301f;
+    --reject-soft: #35191a;
+    --correct-soft: #172436;
+    --bypass-soft: #302814;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 28px 0 8px; }
+.lede { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+input[type="file"] { font: inherit; }
+button {
+  font: inherit; padding: 6px 12px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--ground); color: var(--ink);
+  cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+.stat .label { color: var(--muted); font-size: 12px; }
+.stat .value { font-size: 18px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child, th.left, td.left { text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+tbody tr:hover { background: var(--ground); }
+tr.selected { background: var(--correct-soft); }
+.blocks { display: flex; flex-wrap: wrap; gap: 4px; }
+.block {
+  border-radius: 4px; padding: 3px 7px; cursor: pointer;
+  border: 1px solid transparent; font-variant-numeric: tabular-nums; font-size: 12px;
+}
+.block.accepted { background: var(--accept-soft); color: var(--accept); }
+.block.rejected { background: var(--reject-soft); color: var(--reject); }
+.block.bypass   { background: var(--bypass-soft); color: var(--bypass); }
+.block.plain    { background: var(--ground); color: var(--muted); }
+.block.selected { border-color: currentColor; font-weight: 700; }
+.tokens { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.token {
+  border-radius: 4px; padding: 2px 7px; font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid transparent;
+}
+.token.accepted { background: var(--accept-soft); color: var(--accept); border-color: var(--accept); }
+.token.rejected {
+  background: var(--reject-soft); color: var(--reject);
+  border-color: var(--reject); text-decoration: line-through;
+}
+.token.correction { background: var(--correct-soft); color: var(--correct); border-color: var(--correct); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 12px; margin-top: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { width: 11px; height: 11px; border-radius: 3px; border: 1px solid currentColor; display: inline-block; }
+.note { color: var(--muted); font-size: 12px; margin-top: 8px; max-width: 78ch; }
+.verdict { font-weight: 600; }
+.verdict.ok { color: var(--accept); }
+.verdict.bad { color: var(--reject); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.hidden { display: none; }

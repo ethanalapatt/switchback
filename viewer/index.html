@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Switchback trace viewer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Switchback trace viewer</h1>
+  <p class="lede">
+    Opens a saved block trace and checks it. Everything happens in this page:
+    no server, no network, no inference. The replay verdict below is recomputed
+    from the trace, so a trace whose cache lengths do not match the tokens it
+    committed is reported as inconsistent rather than drawn anyway.
+  </p>
+
+  <div class="panel controls">
+    <label for="file">Trace file (<code>.jsonl</code>):</label>
+    <input id="file" type="file" accept=".jsonl,.json,application/json,text/plain">
+    <button id="demo" type="button">Load the built-in example</button>
+  </div>
+
+  <div id="error" class="panel hidden"></div>
+
+  <section id="report" class="hidden">
+    <div class="panel">
+      <h2>Request</h2>
+      <div id="summary" class="grid"></div>
+      <p id="verdict" class="note"></p>
+      <p id="provenance" class="note"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Blocks</h2>
+      <div id="blocks" class="blocks"></div>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accept-soft);color:var(--accept)"></i> fully accepted</span>
+        <span><i class="swatch" style="background:var(--reject-soft);color:var(--reject)"></i> rejected, corrected by the target</span>
+        <span><i class="swatch" style="background:var(--bypass-soft);color:var(--bypass)"></i> bypass, target only</span>
+        <span><i class="swatch" style="background:var(--ground);color:var(--muted)"></i> prefill or single step</span>
+      </div>
+      <p class="note">
+        Colour is never the only signal: every block is labelled with its draft
+        length and how many candidates it accepted, and the detail below spells
+        out what happened in words.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Selected block</h2>
+      <div id="detail"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Rejection position</h2>
+      <table id="positions">
+        <thead><tr><th class="left">First rejection at candidate</th><th>Blocks</th><th>Share</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note">
+        Blocks that accepted every candidate are counted separately as
+        &ldquo;none&rdquo;. A draft length is only worth paying for while these
+        stay far to the right.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>All blocks</h2>
+      <table id="table">
+        <thead><tr>
+          <th class="left">#</th><th class="left">Action</th><th>Draft length</th>
+          <th>Proposed</th><th>Accepted</th><th>First rejection</th><th>Committed</th>
+          <th>Target cache</th><th>Draft cache</th><th>ms</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="example-trace.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>
