@@ -4,7 +4,7 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 and 2 are complete. The execution machine is the DGX Spark itself
+Milestones 1, 2 and 3 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
@@ -12,9 +12,9 @@ Hugging Face reference baselines produce identical greedy token IDs on a
 32-token smoke request.
 
 The sampling core and the independent exact oracle are implemented and
-exhaustively enumerated against each other. There is still no cached engine and
-no model-driven decoding: the sampler is model-free and is driven by row
-callbacks, so M3 has to supply those rows from a real KV cache.
+exhaustively enumerated against each other. The cached target-only engine runs
+on the real Qwen3-4B and produces token-for-token identical greedy output to the
+Hugging Face baseline on a frozen smoke set. No speculation exists yet.
 
 ## Milestones
 
@@ -22,7 +22,7 @@ callbacks, so M3 has to supply those rows from a real KV cache.
 |---|---|---|
 | M1 Hardware and baseline | **Complete** | `artifacts/environment.json`, `artifacts/model_check.json`, `artifacts/pilot/pilot.json`, 11 GPU tests |
 | M2 Sampling oracle | **Complete** | `docs/correctness.md`, 38 oracle tests, 23 property tests |
-| M3 Cached target-only engine | Not started | None |
+| M3 Cached target-only engine | **Complete** | 11 GPU tests, 29 CPU cache tests, `artifacts/pilot/pilot.json` |
 | M4 Fixed greedy speculation | Not started | None |
 | M5 Sampled speculation and traces | Not started | None |
 | M6 Cost controller | Not started | None |
@@ -31,12 +31,12 @@ callbacks, so M3 has to supply those rows from a real KV cache.
 
 ## Next action
 
-Begin M3: implement `src/switchback/cache.py` (the pending-token cache ledger)
-and the Qwen adapter's `forward`/`crop`/`cache_length`, then a native
-target-only greedy and sampling engine in `src/switchback/decoder.py`. Add
-cache/no-cache differential tests before any speculation. Validate in FP32 on
-CPU with the tiny fixture first, then BF16 on the GPU; do not widen tolerances
-to make a failing output comparison pass.
+Begin M4: fixed greedy speculation at lengths 1, 2, 4 and 8, with transactional
+commit and crop. Use fake model adapters to force rejection at every position,
+all-accept, accepted EOS, rejected EOS, and budget termination. The gate is
+exact greedy token agreement with `native_ar` for every fixed length on the
+frozen set, plus a test that the target verification really is one forward call
+of width `g + 1` and that caches never hold a rejected suffix at a boundary.
 
 ---
 
@@ -243,6 +243,112 @@ to make a failing output comparison pass.
     asserts exact rational equality, not `approx`, for all 250 pairs at
     vocabulary sizes 2 and 3. It would not be possible to write that assertion
     with the textbook form.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+---
+
+### M3: Cached target-only engine
+
+- **Status:** complete.
+
+- **Implementation and decisions:**
+  - `cache.py`: the pending-token ledger. The ledger, not the Transformers
+    cache, is the source of truth for length; `get_seq_length()` is checked
+    against it so a divergence is an error rather than wrong output.
+    `assert_boundary` compares token *identity*, not just length, because a
+    stale tentative suffix of the right length is the failure mode that yields
+    plausible-but-wrong text. `crop_to` refuses to grow.
+  - `events.py`: `MonotonicClock` synchronizes before every timestamp bounding a
+    measured region; `FakeClock` counts those synchronizations so a test can
+    assert they happened. Block events carry no full-vocabulary arrays.
+  - `models/qwen.py`: `QwenAdapter.forward` passes `position_ids` and
+    `cache_position` explicitly. Letting Transformers infer them from the
+    attention mask is precisely what a rollback invalidates, since after a crop
+    the cache is shorter than the committed sequence.
+  - `decoder.py`: `decode_target_only` establishes the pending-token convention
+    during initialization, before speculation exists to complicate it. Greedy
+    and sampled decoding are separate algorithms; greedy consumes no randomness.
+  - `EngineOptions.correctness_checks` is recorded in every result, because
+    enabling assertions for one engine and not another would invalidate a
+    latency comparison.
+
+- **Commands actually run:**
+  ```
+  python -m pytest tests/integration/test_cached_engine_cpu.py -q
+  python -m pytest tests/unit/test_cache.py -q
+  python -m pytest -m gpu -q
+  python -m pytest -m 'not gpu and not download' -q
+  python -m switchback pilot --local-files-only --max-new-tokens 32 --repeats 3
+  python -m ruff check . && python -m ruff format --check . && python -m mypy src/switchback
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 220 CPU tests and 22 GPU tests pass. ruff, format and mypy clean.
+  - FP32 CPU: cached logits match full-prefix recomputation to 1e-4 with exact
+    argmax agreement at chunk widths 1, 2 and 5; crop-and-replay reproduces the
+    uncropped logits bitwise; a companion test confirms a stale suffix really
+    does change the logits, so the rollback test cannot pass on a no-op cache.
+  - BF16 GPU: `decode_target_only` and `hf_ar` emit **identical 32-token ID
+    arrays** on all four frozen smoke prompts.
+  - **Failure found and fixed (policy, not arithmetic):** the first conformance
+    run diverged at token 12, native emitting 151668 where `hf_ar` emitted
+    151645 (`<|im_end|>`). Transformers' `eos_token_id=None` stops generation
+    from *ending* at a stop token but leaves it in the distribution, while
+    Switchback masks stop tokens before the softmax. Fixed by also setting
+    `suppress_tokens` on the baselines.
+  - **Measured and recorded, not fixed:** cached and uncached BF16 logits do not
+    agree on argmax for every row. One or two rows in thirty flip. Max absolute
+    difference 0.73-1.13 against a logit scale near 50 (about 2% relative), mean
+    0.07. Every flip was at a row with top-2 margin at most 0.125. The test
+    asserts that bound rather than a widened tolerance, because reduction-order
+    noise flips only near-ties while a cache off-by-one flips confident rows.
+    Documented in `docs/correctness.md` section 4a.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:** `artifacts/pilot/pilot.json`, re-measured with
+  `native_ar` included. All three engines produce identical greedy IDs. Median
+  request latency at 32 fixed greedy tokens: `hf_ar` 1526.6 ms, `native_ar`
+  1525.8 ms, `hf_dynamic` 746.1 ms. **Pilot numbers for sizing M7, not a
+  benchmark result:** four unrandomized prompts, not the locked cohort. The one
+  thing worth reading from them is that Switchback's own loop is within 0.1% of
+  `hf_ar`, so the Python-overhead risk in SPEC.md section 11 is not visible at
+  this scale.
+
+- **Source commit:** recorded in `artifacts/pilot/pilot.json` under
+  `source.commit`.
+
+- **Known limitations and blockers:**
+  - No speculation. `speculative_block` exists in `sampling.py` but nothing
+    connects it to a cache or to a draft model.
+  - Level 3 of `docs/correctness.md` now holds for target-only decoding only.
+  - The BF16 argmax flips above mean cached and uncached BF16 execution are not
+    interchangeable at the logit level. Nothing in the design depends on them
+    being interchangeable, but a future comparison must not assume it.
+  - `hf_dynamic`'s TTFT is roughly 3x `hf_ar`'s, because the first verified
+    block must generate draft tokens before releasing anything. Expected, and a
+    reason the natural-stop cohort is reported separately.
+
+- **Next concrete step:** implement fixed greedy speculation for M4.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* pass `position_ids` and `cache_position` explicitly on every
+    forward call instead of letting Transformers infer them.
+  - *Alternative considered:* passing only `input_ids` and an attention mask,
+    which is what nearly every Transformers example does and which works
+    perfectly for ordinary decoding.
+  - *Failure mode:* the inference is `positions = arange(past_length, past_length
+    + width)` derived from the mask. That is right whenever the cache and the
+    sequence agree. After a speculative rejection they deliberately do not: the
+    cache has been cropped back while the request has committed a correction, so
+    an inferred position is off by the number of discarded candidates. The
+    rotary embedding then rotates every query by the wrong angle, producing
+    fluent, wrong text with no error anywhere.
+  - *Evidence:* `test_cropping_then_replaying_reproduces_the_uncropped_logits`
+    poisons a cache with a wrong suffix, crops it back, and requires the replayed
+    logits to be bitwise equal to the un-poisoned ones; `test_a_stale_suffix_
+    actually_changes_the_logits` confirms the poison was not a no-op, so the
+    first test cannot pass vacuously.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
