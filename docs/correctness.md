@@ -6,7 +6,7 @@ What this project claims, in four separate levels, and what backs each one.
 |---|---|---|
 | 1. Mathematical | Under exact arithmetic, speculative sampling emits tokens from the target distribution | The proof below |
 | 2. Executable finite-model | This implementation reproduces that distribution on small enumerable cases | `tests/unit/test_oracle.py`, exhaustive enumeration against an independent rational oracle |
-| 3. Real-model numerical conformance | Greedy speculation returns the same token IDs as target-only decoding on the pinned Qwen3 pair | Not yet established. Milestones 3 and 4 |
+| 3. Real-model numerical conformance | The cached engine returns the same greedy token IDs as the Hugging Face baseline on the pinned Qwen3 pair | Established for target-only decoding in M3, `tests/integration/test_cached_engine_gpu.py`. Speculation is M4 |
 | 4. Empirical performance | Speculation is faster on a named workload and hardware | Not measured. Milestone 7 |
 
 The levels do not substitute for each other. Level 2 passing says nothing about
@@ -154,6 +154,62 @@ which can flip a single acceptance decision and diverge the continuation. Greedy
 decoding is the case where exact agreement *is* required, and it is checked on
 token-ID arrays, never on decoded text (invariant I6).
 
+## 4a. What BF16 actually does to the cache differential
+
+Measured on the GB10 with `Qwen/Qwen3-4B` in BF16, comparing a prefill split
+into two forward calls against the same prompt in one uncached call:
+
+| Quantity | Measured |
+|---|---|
+| Max absolute logit difference | 0.73 to 1.13 |
+| Mean absolute logit difference | about 0.07 |
+| Max logit magnitude | about 50 |
+| Max relative difference | about 2% |
+| Rows (of ~30) whose argmax flips | 0 to 2 |
+| Largest top-2 margin at a flipped row | 0.125 |
+
+The third-to-last row is the interesting one. **Cached and uncached BF16 logits
+do not agree on argmax for every position.** Splitting a prefill changes the
+reduction order, BF16 keeps 8 mantissa bits, and across 36 layers that is enough
+to flip a near-tie.
+
+This is not a licence to widen a tolerance until the test passes. The useful
+distinction is *where* differences land:
+
+* Reduction-order noise flips only near-ties. Every observed flip was at a row
+  whose top-2 margin was at most 0.125, a quarter of one percent of the logit
+  scale.
+* A genuine off-by-one in the cache shifts the conditioning by a whole token.
+  That changes logits by order 10 and flips rows the model was confident about.
+
+So `test_cached_logits_match_full_prefix_recomputation` asserts the relative
+bound *and* that every disagreeing row is a near-tie, which a misalignment
+cannot satisfy. The same comparison in FP32 on the tiny CPU fixture holds to
+1e-4 with exact argmax agreement, which is why SPEC.md requires validating FP32
+on CPU before trusting BF16 on the GPU.
+
+End-to-end greedy conformance is a separate and stronger check: on the frozen
+smoke set, `decode_target_only` and `hf_ar` produce **identical 32-token ID
+arrays**, because both walk the same cached path and the near-ties above did not
+arise at a decision point. That equality is the evidence for level 3, not the
+logit differential.
+
+### A policy difference that looked like a numerical bug
+
+The first run of that conformance test failed at token 12: the native engine
+emitted 151668 where the baseline emitted 151645, which is `<|im_end|>`.
+
+The cause was not numerical. Under `eos_policy="suppress_until_budget"`,
+Transformers' `eos_token_id=None` stops generation from *ending* at a stop
+token, but the stop token is still in the distribution and can still be emitted.
+Switchback applies the EOS policy to the distribution itself (SPEC.md section
+4.1), masking stop tokens to `-inf` before the softmax. Two different policies,
+both defensible, producing a mismatch that reads exactly like a cache bug.
+
+The fix was to make the baseline do what the specification says by also setting
+`suppress_tokens`. The lesson is recorded here because "the engines disagree"
+almost never identifies its own cause.
+
 ## 5. How the oracle stays independent
 
 `src/switchback/oracle.py` does not import `switchback.sampling`, and
@@ -184,9 +240,13 @@ stand in for the enumeration.
 
 ## 6. Current status
 
-Levels 1 and 2 are done. Levels 3 and 4 are not, and the README says so.
+Levels 1 and 2 are done. Level 3 holds for target-only decoding as of milestone
+3; speculation is not yet implemented, so the level-3 claim does not extend to
+it. Level 4 is not measured, and the README says so.
 
 ```
 python -m pytest tests/unit/test_oracle.py tests/unit/test_sampling.py -q
 python -m pytest tests/property -q
+python -m pytest tests/integration/test_cached_engine_cpu.py -q     # FP32
+python -m pytest tests/integration/test_cached_engine_gpu.py -q -m gpu  # BF16
 ```
