@@ -4,7 +4,7 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 through 6 are complete. Milestone 7 is in progress. The execution machine is the DGX Spark itself
+Milestones 1 through 7 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
@@ -15,11 +15,14 @@ Greedy and sampled speculation and the measured cost controller all run on the
 real Qwen3 pair. Sampled output is verified by exhaustive enumeration against
 the independent oracle, exactly, through the real cache and softmax.
 
-**Greedy conformance is not 100%.** It is 100% at 32 output tokens and 75% at 64
-and beyond, and every divergence is a BF16 near-tie with a chosen-token gap of
-at most 0.25 logits against noise measured at up to 1.13. This is the risk
-SPEC.md section 11 anticipated, it is now quantified, and it has an unresolved
-consequence for M7 recorded in ADR 0004. No benchmark has run.
+**The primary matrix has run and the controller did not win.** Over 128 held-out
+prompts at 256 greedy tokens, `adaptive` is 2.021x [1.966, 2.070] against
+`hf_ar`, but `fixed_8` is 2.066x and `hf_dynamic` is 2.234x. The ordering holds
+on both datasets separately. `RESULTS.md` is generated from the raw rows.
+
+**Greedy conformance is 61.7-64.1% at 256 tokens.** Every divergence is a BF16
+near-tie; the 18 the automatic screen could not explain are each traced to a
+position and an execution path in ADR 0006.
 
 ## Milestones
 
@@ -31,27 +34,25 @@ consequence for M7 recorded in ADR 0004. No benchmark has run.
 | M4 Fixed greedy speculation | **Complete** | 21 GPU tests, 82 forced-path tests, `artifacts/profile/m4_profile.json` |
 | M5 Sampled speculation and traces | **Complete** | 11 GPU tests, exact oracle agreement, `artifacts/traces/`, `artifacts/evidence.json` |
 | M6 Cost controller | **Complete** | 65 controller/adaptive tests, `artifacts/calibration.json`, `artifacts/controller_check.json`, `artifacts/conformance.json` |
-| M7 Benchmark and report | **In progress** | Harness complete and proven end to end by `artifacts/runs/smoke`. The primary matrix has **not** run. |
+| M7 Benchmark and report | **Complete** | `RESULTS.md`, `artifacts/runs/primary/` (3,072 requests, validated), 32 report tests |
 | M8 Reviewer demo | Not started | None |
 
 ## Next action
 
-**Run the primary matrix.** Everything it needs is built, committed and proven
-by the smoke run. The command is:
+Begin M8. The remaining cohorts matter more than polish, and one of them could
+change the headline:
 
-```bash
-python -m bench.run --config configs/primary.toml --out artifacts/runs/primary
-```
-
-Estimated at **7.7 hours** on this machine (3,072 requests: 128 held-out
-prompts x 3 repeats x 8 engines at 256 tokens), derived from the smoke run's
-measured per-request times. It is resumable, so `--max-seconds` can cap one
-unattended stretch and rerunning the same command continues it. That is a real
-commitment of Ethan's GPU and is his call to start.
-
-After it completes: `bench.validate`, then `scripts/render_results.py ... --out
-RESULTS.md`, then the natural-stop and sampled cohorts. Calibration should also
-be refitted on the locked calibration split rather than the pilot prompts.
+1. **Natural stop** (`configs/natural.toml`, EOS respected). The fixed-length
+   condition hides draft startup cost on short completions, which is where
+   speculation is most likely to lose. This is the cohort that would produce a
+   non-zero slowdown fraction if one exists.
+2. **The no-bypass ablation.** `adaptive` never bypassed in the primary run, so
+   `adaptive` and `adaptive_no_bypass` should be identical there; running the
+   ablation on natural-stop data is where bypass could earn its place.
+3. **Sampled cohort** at temperature 0.7, reported separately, with the explicit
+   note that lower total latency on variable-length completions is not a decode
+   speedup.
+4. Reviewer polish: a GIF from a real saved trace, and a final README pass.
 
 ---
 
@@ -832,6 +833,97 @@ be refitted on the locked calibration split rather than the pilot prompts.
     `test_a_mismatch_without_evidence_is_refused` and
     `test_evidence_pointing_at_the_wrong_position_is_refused` close the routes
     by which a run could claim a near-tie it did not measure.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+
+---
+
+### M7 outcome: the primary matrix
+
+- **Status:** complete. 3,072 requests, 0 errors, one process, 7.6 hours
+  (05:19 to 12:54 local). Validated and rendered.
+
+- **Headline, as measured:** `adaptive` reaches **2.021x [1.966, 2.070]** against
+  `hf_ar`. It is **beaten by `fixed_8` (2.066x) and by `hf_dynamic` (2.234x)**.
+  The ordering `hf_dynamic > fixed_8 > adaptive` holds on MBPP (2.453 / 2.215 /
+  2.144) and GSM8K (2.034 / 1.927 / 1.905) separately, so it is not a pooling
+  artifact. This is the risk SPEC.md section 11 named as "controller fails to
+  beat HF dynamic", and its documented fallback applies: keep the controller as
+  an ablation and promote the measured study, not an unearned speed claim.
+
+- **Why the controller lost:**
+  1. Acceptance is high and flat across this cohort (0.91 at candidate position
+     1, 0.66 at position 8). When the best fixed length is the same for nearly
+     every prompt, varying it can only cost. That is a limitation of the cohort
+     as much as of the controller, and it is not a defence: a fair test needs a
+     workload where the best length varies, which M8's natural-stop and
+     context-stress cohorts might supply.
+  2. `hf_dynamic` stops drafting **within** a block on the draft's own
+     confidence. Switchback's controller chooses `g` before the block from past
+     acceptance only. Confidence-based early stopping is compatible with the
+     distribution argument -- the draft's confidence is available before
+     verification -- so not implementing it is a real gap, not a constraint.
+
+- **What is established:** `native_ar` is 0.999x of `hf_ar`, so Switchback's own
+  loop has no measurable overhead against the reference. The slowdown fraction
+  is 0.0% for every engine. `hf_dynamic` pays for its win in TTFT: 151 ms median
+  against 49 ms for everything else.
+
+- **Failure found and fixed:** the run was refused by the renderer. 18 of 857
+  divergences exceeded the 0.5 near-tie bound, all on two positions, hit
+  deterministically across engines and repeats. Investigation showed the screen
+  measured the wrong thing: at `mbpp_heldout_169` index 46 the engine's own
+  replayed cache gives a margin of 0.25 toward the token it chose, while every
+  freshly-prefilled path gives 0.5 the other way; at `gsm8k_heldout_251` index 72
+  every reproducible path prefers the token `hf_dynamic` chose and the
+  **baseline** is the outlier. Resolved by ADR 0006 with a second adjudication
+  tier rather than by moving the bound. All 18 adjudicated `near_tie`, 0
+  unexplained.
+
+- **Commands actually run:**
+  ```
+  python -m switchback calibrate --workload artifacts/workloads/primary.json --max-prompts 32
+  python -m switchback evidence --gpu --out artifacts/evidence.json
+  python -m bench.run --config configs/primary.toml --out artifacts/runs/primary
+  python -m bench.adjudicate artifacts/runs/primary --config configs/primary.toml
+  python -m bench.validate artifacts/runs/primary --config configs/primary.toml
+  python scripts/render_results.py artifacts/runs/primary --out RESULTS.md
+  ```
+
+- **Benchmark or evidence paths:** `RESULTS.md`, `artifacts/runs/primary/`
+  (`manifest.json`, `requests.jsonl`, `evidence.json`, `adjudication.jsonl`),
+  `artifacts/calibration.json` (fitted on the locked calibration split, 354
+  observations at position 0).
+
+- **Known limitations and blockers:**
+  - Only the primary cohort has run. Natural-stop, sampled, context-stress and
+    the no-bypass ablation are configured but not measured.
+  - The bypass path still has no real-data evidence: 0 bypasses in 384 adaptive
+    requests, correctly.
+  - Greedy conformance is 61.7 to 64.1%, not 100%.
+  - The 272 rows from the bounded first chunk were discarded rather than
+    resumed, so the whole cohort was measured in one process. They are in the
+    session scratchpad, not the repository.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* when the primary run was refused for 18 over-bound divergences,
+    investigate the measurement rather than raise the bound.
+  - *Alternative considered:* set `max_chosen_token_gap` to 2.0. Both cases
+    pass, the report renders, thirty seconds of work.
+  - *Failure mode:* the bound is a claim about floating point, not a tolerance
+    for wrong answers. At 2.0 it would also admit a genuine cache fault at any
+    position where the model is confident by less than 2 logits, which is most
+    of them. Moving a threshold because a run failed is the move ADR 0005
+    exists to prevent, and the run would then have shipped with the failure
+    silently absorbed.
+  - *Evidence:* the investigation found the screen was comparing against a state
+    no engine was in -- the engine's own replayed cache disagrees with every
+    freshly-prefilled path at `mbpp_heldout_169` index 46 -- and at
+    `gsm8k_heldout_251` index 72 the baseline is the outlier, not the candidate.
+    `bench/adjudicate.py` plus ten tests in
+    `tests/report/test_conformance_contract.py` pin the new contract, including
+    that a `near_tie` verdict contradicting its own margin is refused.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
