@@ -24,6 +24,7 @@ from switchback.manifest import build_manifest, describe_model, load_manifest, w
 from switchback.models.qwen import (
     DRAFT_REPO,
     TARGET_REPO,
+    QwenAdapter,
     check_logits_vocab_match,
     render_chat_prompt,
     resolve_revision,
@@ -178,6 +179,87 @@ def command_pilot(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_profile(args: argparse.Namespace) -> int:
+    """Diagnostic per-stage profile. Never a benchmark result."""
+    from switchback.pilot import load_pair
+    from switchback.profiling import (
+        format_profile,
+        profile_single_forward,
+        profile_speculative_block,
+        write_profile,
+    )
+    from switchback.types import DecodeConfig
+
+    runtime = {
+        "native_overrides": configure_torch_native_overrides().as_dict(),
+        "deterministic_knobs": deterministic_runtime(),
+    }
+    manifest = load_manifest(args.manifest)
+    target_entry = manifest["models"]["target"]
+    draft_entry = manifest["models"]["draft"]
+    target, draft, _, _ = load_pair(
+        target_entry["repo_id"],
+        target_entry["revision"],
+        draft_entry["repo_id"],
+        draft_entry["revision"],
+        device=args.device,
+        dtype=args.dtype,
+        attn_implementation=args.attn,
+        local_files_only=args.local_files_only,
+    )
+    target_adapter = QwenAdapter(
+        model=target.model,
+        device=args.device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    draft_adapter = QwenAdapter(
+        model=draft.model,
+        device=args.device,
+        vocab_size=draft.logits_vocab_size,
+        name="draft",
+    )
+    prompt_ids = render_chat_prompt(target.tokenizer, args.prompt)
+    config = DecodeConfig(
+        mode="greedy",
+        temperature=1.0,
+        max_new_tokens=256,
+        eos_policy="suppress_until_budget",
+        seed=42,
+    )
+    document = {
+        "device": args.device,
+        "dtype": args.dtype,
+        "attn_implementation": args.attn,
+        "runtime": runtime,
+        "models": {"target": target_entry["repo_id"], "draft": draft_entry["repo_id"]},
+        "prompt_tokens": len(prompt_ids),
+        "forward_by_width": profile_single_forward(
+            target_adapter, prompt_ids, widths=[1, 2, 3, 5, 9, 17], device=args.device
+        ),
+        "draft_forward_by_width": profile_single_forward(
+            draft_adapter, prompt_ids, widths=[1, 2, 3, 5, 9], device=args.device
+        ),
+        "blocks": [
+            profile_speculative_block(
+                target_adapter,
+                draft_adapter,
+                prompt_ids,
+                config,
+                target.eos_token_ids,
+                gamma=gamma,
+                blocks=args.blocks,
+                device=args.device,
+            )
+            for gamma in (1, 2, 4, 8)
+        ],
+    }
+    print(format_profile(document))
+    write_profile(document, args.out)
+    print(f"  wrote {args.out}")
+    return 0
+
+
 def command_demo(args: argparse.Namespace) -> int:
     """Offline fixture check: builds the tiny model twice and compares logits."""
     import torch
@@ -253,6 +335,22 @@ def build_parser() -> argparse.ArgumentParser:
     pilot.add_argument("--warmups", type=int, default=2)
     pilot.add_argument("--out", type=Path, default=Path("artifacts/pilot/pilot.json"))
     pilot.set_defaults(handler=command_pilot)
+
+    profile = subparsers.add_parser(
+        "profile", help="diagnostic per-stage block timings (never a benchmark result)"
+    )
+    profile.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    profile.add_argument("--device", default="cuda")
+    profile.add_argument("--dtype", default="bfloat16")
+    profile.add_argument("--attn", default="sdpa")
+    profile.add_argument("--local-files-only", action="store_true")
+    profile.add_argument("--blocks", type=int, default=16)
+    profile.add_argument(
+        "--prompt",
+        default="Write a Python function for this task. Return code only. Reverse a string.",
+    )
+    profile.add_argument("--out", type=Path, default=Path("artifacts/profile/m4_profile.json"))
+    profile.set_defaults(handler=command_profile)
 
     demo = subparsers.add_parser("demo", help="offline tiny-model fixture check")
     demo.add_argument("--seed", type=int, default=1234)
