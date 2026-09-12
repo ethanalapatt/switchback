@@ -4,18 +4,22 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 through 5 are complete. The execution machine is the DGX Spark itself
+Milestones 1 through 6 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
 Hugging Face reference baselines produce identical greedy token IDs on a
 32-token smoke request.
 
-Both greedy and sampled speculation run on the real Qwen3 pair. Greedy output is
-token-for-token identical to target-only decoding; sampled output is verified by
-exhaustive enumeration against the independent oracle, through the real cache
-and softmax. Traces replay offline. The controller and the benchmark are not
-built, and no benchmark has run.
+Greedy and sampled speculation and the measured cost controller all run on the
+real Qwen3 pair. Sampled output is verified by exhaustive enumeration against
+the independent oracle, exactly, through the real cache and softmax.
+
+**Greedy conformance is not 100%.** It is 100% at 32 output tokens and 75% at 64
+and beyond, and every divergence is a BF16 near-tie with a chosen-token gap of
+at most 0.25 logits against noise measured at up to 1.13. This is the risk
+SPEC.md section 11 anticipated, it is now quantified, and it has an unresolved
+consequence for M7 recorded in ADR 0004. No benchmark has run.
 
 ## Milestones
 
@@ -26,20 +30,25 @@ built, and no benchmark has run.
 | M3 Cached target-only engine | **Complete** | 11 GPU tests, 29 CPU cache tests, `artifacts/pilot/pilot.json` |
 | M4 Fixed greedy speculation | **Complete** | 21 GPU tests, 82 forced-path tests, `artifacts/profile/m4_profile.json` |
 | M5 Sampled speculation and traces | **Complete** | 11 GPU tests, exact oracle agreement, `artifacts/traces/`, `artifacts/evidence.json` |
-| M6 Cost controller | Not started | None |
+| M6 Cost controller | **Complete** | 65 controller/adaptive tests, `artifacts/calibration.json`, `artifacts/controller_check.json`, `artifacts/conformance.json` |
 | M7 Benchmark and report | Not started | Renderer starter file only |
 | M8 Reviewer demo | Not started | None |
 
 ## Next action
 
-Begin M6: the measured cost controller. Fit acceptance and cost tables from
-calibration data only, implement the `g` selection over `{0, 1, 2, 4, 8}` with
-startup amortization, censored observations and sticky bypass, and freeze the
-profile hash before evaluation. Use fake cost tables to exercise winning
-speculation, target-only preference, initialization cost, insufficient
-observations and remaining-budget clipping, and add a metamorphic test that
-changing a held-out dataset label cannot change a decision given identical
-allowed state. No speed threshold is a correctness gate.
+Begin M7 by **resolving ADR 0004 first**, before any benchmark runs. The report
+renderer refuses any cell where greedy outputs differ, and at the primary
+condition of 256 fixed-length greedy tokens that will refuse roughly a quarter
+of cells. Option A in ADR 0004 -- report conformance as a measured per-cell rate
+and let the renderer proceed only when every divergence is a near-tie under a
+recorded bound -- is the recommendation, and it needs its own ADR and its own
+tests in `tests/report/`.
+
+Then implement `bench/prepare.py` (locked MBPP and GSM8K selection by SHA-256
+ordering, the controlled generator, `data/manifest.json` dataset entries),
+`bench/run.py` (manifest, warmups, randomized engine order, resumable chunks),
+and `bench/validate.py`. Calibration must move off the pilot prompts and onto
+the locked calibration split.
 
 ---
 
@@ -562,6 +571,146 @@ allowed state. No speed threshold is a correctness gate.
     an argmax and requires the gate to fail -- on a pair chosen so the residual
     has three-token support, because the first attempt used a pair where the two
     coincide and the mutation went undetected.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+---
+
+### M6: Measured controller and bypass
+
+- **Status:** complete.
+
+- **Implementation and decisions:**
+  - `controller.py`: `CostController` choosing from `{0, 1, 2, 4, 8}` by
+    estimated cost per committed token, bypassing when no draft length beats
+    target-only by the 5% margin. Bypass is sticky and retires the draft cache.
+  - Conditional acceptance is **censored**: a block rejected at position 2
+    contributes successes at 0 and 1, one failure at 2, and nothing at 3 and
+    beyond. Beta(1, 1) smoothing, so an unobserved position returns 0.5 rather
+    than 0 or 1.
+  - The catch-up forward is in the cost model, weighted by the probability that
+    every candidate is accepted, because milestone 4 measured it as a full
+    draft call paid on most blocks.
+  - Draft prefill is amortized over `min(remaining budget, calibration median
+    length)`.
+  - Invariant I9 is enforced by the `ControllerState` schema: no field for a
+    dataset, prompt id, expected answer, or eventual length. A decision cannot
+    depend on information the state cannot carry.
+  - `decoder.py` now runs one block loop for every engine. `FixedController(g)`
+    gives `fixed_g`, `CostController` gives `adaptive`, so comparing them
+    compares policies rather than implementations.
+  - `calibration.py` fits and freezes the profile, hashing it and verifying the
+    hash on load.
+  - `BlockObservation`'s per-stage timings became optional. Whole-block duration
+    is free; attributing stages needs a synchronization between each one, and
+    instrumentation the controller needs would have to stay inside the
+    controller's measured path. Null means unavailable, never zero.
+
+- **Commands actually run:**
+  ```
+  python -m pytest tests/unit/test_controller.py tests/unit/test_adaptive_engine.py -q
+  python -m pytest tests/unit/test_calibration.py -q
+  python -m pytest -m 'not gpu and not download' -q
+  python -m pytest -m gpu -q
+  python -m switchback calibrate --max-new-tokens 96 --gamma 8 --repeats 2
+  python -m switchback controller-check --max-new-tokens 96 --repeats 3
+  python -m switchback conformance --lengths 32 64 128 256
+  python -m ruff check . && python -m ruff format --check . && python -m mypy src/switchback
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 522 CPU tests and 54 GPU tests pass. ruff, format and mypy clean.
+  - Fake cost tables exercise every named regime: high acceptance picks g=8,
+    moderate picks 4 then 2, low prefers target-only, a marginal win inside the
+    5% margin is refused, an expensive draft never wins, and a target forward
+    that scales with width kills long drafts.
+  - Budget clipping verified at remaining budgets 2, 3, 5, 9 and 200; a budget
+    of 1 leaves no draft length feasible and correctly does **not** trigger
+    sticky bypass, because that is a budget fact rather than a policy judgement.
+  - Censoring regression: 50 rejections at position 0 leave position 6's
+    estimate exactly at the calibration value. The converse is also tested --
+    with a thin prior, local evidence does dominate.
+  - Metamorphic: two controllers fed identical observations return identical
+    decisions across 32 state combinations, and `ControllerState` raises
+    `TypeError` if a dataset label is even passed.
+  - **Failure found and fixed:** the first conformance measurement omitted the
+    EOS mask the engines use and reported a 15.5-logit divergence, which would
+    have meant a real decoder bug. With the mask applied the same case is a
+    0.125-logit near-tie. Recorded in ADR 0004.
+  - **Measurement artifact found and fixed:** `profile_single_forward` had no
+    global warmup, so the first width measured also paid one-time allocator and
+    kernel setup. That made width 1 read slower than width 2 and would have
+    inflated the target-only cost the controller compares against.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:**
+  - `artifacts/calibration.json`: frozen profile, hash
+    `b3f6a4c569380df8...`. Conditional acceptance 0.81 to 0.97 by position on
+    these prompts. Target forward 52.2 ms at width 1 and 46.8 to 49.0 ms at
+    widths 2 to 9. **A width-1 forward is about 10% more expensive than a
+    multi-token one on this GB10**, so target-only decoding pays a penalty that
+    verification does not.
+  - `artifacts/controller_check.json`: in-sample, four prompts, three repeats,
+    randomized engine order in one process. Median request latency at 96 fixed
+    greedy tokens: `native_ar` 5150 ms, `fixed_1` 3753, `fixed_2` 3070,
+    `fixed_4` 2619, `fixed_8` 2520, `adaptive` 2568, `adaptive_no_bypass` 2542.
+    **Not a benchmark result:** in-sample, four prompts, no held-out cohort, no
+    confidence intervals.
+  - `artifacts/conformance.json`: greedy agreement 100% at 32 tokens and 75% at
+    64, 128 and 256, largest chosen-token gap 0.25 logits.
+
+- **Source commit:** recorded in each artifact under `source.commit`.
+
+- **The one correct decision, as SPEC.md M6 asks:** on these prompts the
+  controller chose `g=8` for 127 of 198 blocks and landed at 2568 ms against a
+  best fixed length of 2520 ms -- within 2% of the best fixed length **without
+  being told which one it was**, and less than half of `native_ar`. It also
+  correctly avoided `g=1` and `g=2`, which are 46% and 20% slower here.
+
+- **The one limitation, as SPEC.md M6 asks:** the controller never bypassed.
+  `bypass_fraction` is 0 across every request, because acceptance on these
+  prompts is 71 to 94% and bypass would be the wrong call. So this check
+  exercises the *selection* logic and not the *bypass* logic, which remains
+  covered only by fake cost tables. It also cannot show adaptive beating the
+  best fixed length: on a single in-sample workload the best fixed length is
+  knowable, and matching it is the ceiling. Any real argument for the controller
+  has to come from a cohort where the best fixed length varies, which is exactly
+  what M7 is for.
+
+- **Known limitations and blockers:**
+  - **Blocking M7:** `scripts/render_results.py` refuses any cell where greedy
+    outputs differ. At 256 fixed-length greedy tokens that will refuse roughly a
+    quarter of cells. ADR 0004 records three options and recommends one; none is
+    implemented.
+  - Calibration currently uses the pilot prompts, which are also the check's
+    evaluation prompts. That is in-sample by construction and must move to the
+    locked calibration split in M7.
+  - Per-token cost varies by roughly 10% between processes on this machine.
+    Every comparison must run interleaved in one process; cross-process latency
+    comparisons are not trustworthy here.
+  - The sampled engine has no controller; `adaptive` is greedy only.
+
+- **Next concrete step:** resolve ADR 0004, then build `bench/prepare.py`.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* censor candidate positions after the first rejection instead of
+    counting them as failures.
+  - *Alternative considered:* treat a block that proposed 8 and accepted 2 as
+    two successes and six failures. It is one line shorter and the totals still
+    look like probabilities.
+  - *Failure mode:* those six positions were never evaluated. The block stopped
+    at the first rejection, so nothing was ever asked about position 5. Counting
+    them as failures drives the estimated acceptance at long positions toward
+    zero, which drives `E(g) = 1 + sum_j prod_k a_k` down for large `g`, which
+    makes the controller stop choosing long draft lengths. The bias is
+    self-reinforcing: shorter blocks produce fewer observations at long
+    positions, so the estimates never recover. It would look like a controller
+    that had learned something.
+  - *Evidence:* `test_repeated_early_rejections_do_not_collapse_long_position_estimates`
+    feeds 50 blocks rejected at position 0 and requires position 6's estimate to
+    be unchanged to floating-point equality, while position 0's does move;
+    `test_local_evidence_dominates_once_calibration_is_thin` shows the converse,
+    so the test is not just asserting that nothing ever updates.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
