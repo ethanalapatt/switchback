@@ -132,6 +132,14 @@ class BlockObservation:
 
     Timing fields are nanoseconds measured after GPU synchronization. They are
     supplied to the controller only; the sampler never sees them.
+
+    ``total_ns`` is always available: the engine already synchronizes once per
+    block to timestamp token release, so whole-block duration costs nothing
+    extra. The per-stage fields are ``None`` unless a diagnostic pass measured
+    them, because attributing them requires a synchronization between every
+    stage, and instrumentation the controller needs would have to stay inside
+    the controller's own measured path (SPEC.md section 9.4). Null means
+    unavailable; it never means zero.
     """
 
     block_id: int
@@ -139,11 +147,12 @@ class BlockObservation:
     proposed: int
     accepted: int
     rejection_position: int | None
-    draft_ns: int
-    target_ns: int
-    overhead_ns: int
+    total_ns: int
     committed: int
     cache_length_after: int
+    draft_ns: int | None = None
+    target_ns: int | None = None
+    overhead_ns: int | None = None
 
 
 @dataclass(frozen=True)
