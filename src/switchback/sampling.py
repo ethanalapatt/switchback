@@ -99,7 +99,11 @@ class TorchRandomSource:
         probabilities = normalize(weights)
         cumulative = torch.cumsum(probabilities.double(), dim=-1)
         draw = self._uniform(stream) * float(cumulative[-1])
-        index = int(torch.searchsorted(cumulative, torch.tensor(draw, dtype=cumulative.dtype)))
+        # The search value has to live on the same device as the CDF. Building
+        # it with a bare torch.tensor() defaulted to CPU, which worked for every
+        # CPU test and failed on the first CUDA request.
+        needle = torch.tensor(draw, dtype=cumulative.dtype, device=cumulative.device)
+        index = int(torch.searchsorted(cumulative, needle))
         index = min(index, int(probabilities.shape[-1]) - 1)
         if float(probabilities[index]) > 0.0:
             return index
