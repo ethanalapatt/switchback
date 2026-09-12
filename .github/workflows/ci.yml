@@ -1,0 +1,83 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-gate:
+    name: CPU correctness and report integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # No model weights or datasets are downloaded in CI. The tiny fixture is
+      # built from a config in code, so the whole job runs offline after setup.
+      HF_HUB_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the CPU torch build
+        # Pinned to the CPU index on purpose: the generic PyPI wheel is what
+        # would clobber a working NVIDIA install on the Spark, so the two
+        # environments are locked separately.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install -r requirements-cpu.lock
+          python -m pip install -e . --no-deps
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Format
+        run: python -m ruff format --check .
+
+      - name: Types
+        run: python -m mypy src/switchback
+
+      - name: Unit, integration and property tests
+        # `gpu` and `download` are excluded because this runner has neither.
+        # These skips do NOT satisfy the GPU milestone gates; see PROGRESS.md.
+        run: python -m pytest -m 'not gpu and not download' -q
+
+      - name: Report integrity tests
+        run: python -m pytest tests/report -q
+
+      - name: Offline tiny-model demo
+        run: python -m switchback demo
+
+      - name: Environment doctor
+        run: python -m switchback doctor --out artifacts/environment-ci.json
+
+      - name: Confirm the GPU gate is not satisfied on CPU
+        # --require-gpu must fail here. If it ever passes, the doctor has
+        # stopped distinguishing a real device from its absence.
+        run: |
+          if python -m switchback doctor --require-gpu; then
+            echo "::error::doctor --require-gpu passed on a CPU runner"
+            exit 1
+          fi
+          echo "doctor --require-gpu correctly failed on a CPU runner"
+
+      - name: Offline reproduction preset
+        run: bash scripts/reproduce.sh --preset cpu
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-environment
+          path: artifacts/environment-ci.json
+          if-no-files-found: warn
