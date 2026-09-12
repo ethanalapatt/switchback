@@ -14,10 +14,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from switchback.cache import CacheHandle
+from switchback.cache import CacheHandle, rollback_length
 from switchback.events import BlockEvent, Clock, EventSink, MonotonicClock, NullSink
 from switchback.models.qwen import QwenAdapter
 from switchback.sampling import (
+    BlockOutcome,
     RandomSource,
     TorchRandomSource,
     forbidden_token_ids,
@@ -251,3 +252,331 @@ def _assert_termination(
         raise AssertionError("a stop token was committed without terminating the request")
     if len(state.release_ns) != len(committed):
         raise AssertionError("release timestamps and committed tokens disagree")
+
+
+@dataclass
+class DraftState:
+    """The draft model's cache and whether it has been initialized yet.
+
+    The draft is prefilled lazily, on the first block that actually drafts, and
+    that prefill is charged to the request rather than treated as free
+    (SPEC.md section 4.3). A request that ends at its first token never pays it.
+    """
+
+    adapter: QwenAdapter
+    cache: CacheHandle
+    initialized: bool = False
+
+
+def decode_speculative_greedy(
+    target: QwenAdapter,
+    draft: QwenAdapter,
+    prompt_ids: Sequence[int],
+    config: DecodeConfig,
+    eos_token_ids: Sequence[int],
+    gamma: int,
+    request_id: str = "request",
+    run_id: str = "run",
+    sink: EventSink | None = None,
+    clock: Clock | None = None,
+    options: EngineOptions | None = None,
+) -> DecodeResult:
+    """``fixed_g``: greedy speculation at a fixed draft length.
+
+    Follows SPEC.md section 4.3 exactly. Per block:
+
+    1. Feed the pending token to the draft and continue autoregressively until
+       ``g`` proposals exist. The draft cache then holds ``S + d[:g-1]``.
+    2. Feed ``[S[-1], d_1 ... d_g]`` to the target in **one** forward call of
+       width ``g + 1`` against its ``S[:-1]`` cache. Row ``j`` predicts ``d_j+1``
+       and row ``g`` predicts the bonus token. There are ``g + 1`` rows, not
+       ``g``.
+    3. On the first disagreement, commit the matching prefix plus the target's
+       own token and crop both caches to ``len(S) + accepted``.
+    4. On full acceptance, commit the proposals plus the bonus. The target cache
+       is already right; the draft is one behind and needs a catch-up call whose
+       cost is counted, not hidden.
+
+    Greedy mode only. The sampled path arrives in milestone 5.
+    """
+    import torch
+
+    if gamma < 1:
+        raise ConfigError(f"speculative decoding requires gamma >= 1, got {gamma}")
+    if config.mode != "greedy":
+        raise ConfigError("decode_speculative_greedy only implements greedy mode")
+
+    options = options or EngineOptions()
+    sink = sink if sink is not None else NullSink()
+    clock = clock if clock is not None else MonotonicClock(device=options.device)
+    device = options.device
+
+    prompt = tuple(int(value) for value in prompt_ids)
+    _validate_request(prompt, config)
+    forbidden = forbidden_token_ids(config, eos_token_ids)
+    stop_ids = set() if forbidden else {int(value) for value in eos_token_ids}
+
+    state = RequestState(request_id=request_id, run_id=run_id, prompt_ids=prompt)
+    target.checks = options.correctness_checks
+    draft.checks = options.correctness_checks
+    target_cache = target.new_cache()
+    drafting = DraftState(adapter=draft, cache=draft.new_cache())
+    proposed_total = 0
+    accepted_total = 0
+
+    start_ns = clock.mark()
+    with torch.inference_mode():
+        # --- initialization: prefill, first token, pending-token convention ---
+        logits = target.forward(
+            torch.tensor([prompt], dtype=torch.long, device=device), target_cache
+        )
+        state.target_calls += 1
+        first = greedy_token(logits[0, -1], forbidden_ids=forbidden)
+        released = clock.mark()
+        state.committed.append(first)
+        state.release_ns.append(released)
+        _emit(sink, state, "prefill", 0, target_cache, None, released - start_ns)
+        termination = "eos" if first in stop_ids else "budget"
+
+        while len(state.committed) < config.max_new_tokens and termination != "eos":
+            block_start = clock.now_ns()
+            sequence = state.sequence
+            target_cache.assert_boundary(sequence)
+            remaining = config.max_new_tokens - len(state.committed)
+
+            if remaining == 1:
+                # A block emits at least two tokens, so one remaining token is a
+                # target-only step. This is a budget rule, not a policy decision.
+                pending = torch.tensor([[sequence[-1]]], dtype=torch.long, device=device)
+                row = target.forward(pending, target_cache)
+                state.target_calls += 1
+                token = greedy_token(row[0, -1], forbidden_ids=forbidden)
+                released = clock.mark()
+                state.committed.append(token)
+                state.release_ns.append(released)
+                _emit(
+                    sink,
+                    state,
+                    "target_only",
+                    0,
+                    target_cache,
+                    drafting.cache,
+                    released - block_start,
+                )
+                if token in stop_ids:
+                    termination = "eos"
+                continue
+
+            width = min(gamma, remaining - 1)
+            if not drafting.initialized:
+                # Charged to this request: SPEC.md section 4.3.
+                draft.forward(
+                    torch.tensor([prompt], dtype=torch.long, device=device), drafting.cache
+                )
+                state.draft_calls += 1
+                drafting.initialized = True
+                drafting.cache.assert_boundary(sequence[: len(prompt) + 1])
+
+            proposals = _propose_greedy(
+                draft, drafting, sequence, width, forbidden, stop_ids, device, state
+            )
+            proposed_total += len(proposals)
+
+            verification = torch.tensor(
+                [[sequence[-1], *proposals]], dtype=torch.long, device=device
+            )
+            rows = target.forward(verification, target_cache)
+            state.target_calls += 1
+            outcome = _verify_greedy(rows, proposals, forbidden)
+            accepted_total += outcome.accepted
+
+            committed = list(outcome.emitted)
+            budget_left = config.max_new_tokens - len(state.committed)
+            if len(committed) > budget_left:
+                raise AssertionError(
+                    f"block produced {len(committed)} tokens with {budget_left} of budget left"
+                )
+            stopped_at = _first_stop_index(committed, stop_ids)
+            if stopped_at is not None:
+                committed = committed[: stopped_at + 1]
+                termination = "eos"
+
+            released = clock.mark()
+            state.committed.extend(committed)
+            state.release_ns.extend([released] * len(committed))
+
+            # --- transactional crop: both caches back to S'[:-1] --------------
+            keep = rollback_length(len(sequence), outcome.accepted)
+            new_length = len(prompt) + len(state.committed) - 1
+            if termination == "eos":
+                # The tentative suffix beyond the committed EOS is discarded and
+                # the caches are retired; nothing further reads them.
+                target.crop(target_cache, min(keep, target.cache_length(target_cache)))
+                drafting.cache.crop_to(min(new_length, draft.cache_length(drafting.cache)))
+            else:
+                target.crop(target_cache, keep)
+                if outcome.all_accepted:
+                    # The draft is one candidate behind. Feeding its last
+                    # accepted token costs a forward call that must appear in
+                    # the counters and in the controller's cost model.
+                    draft.forward(
+                        torch.tensor([[proposals[-1]]], dtype=torch.long, device=device),
+                        drafting.cache,
+                    )
+                    state.draft_calls += 1
+                else:
+                    draft.crop(drafting.cache, keep)
+                target_cache.assert_boundary(state.sequence)
+                drafting.cache.assert_boundary(state.sequence)
+
+            _emit_block(
+                sink,
+                state,
+                gamma=width,
+                proposed=len(proposals),
+                accepted=outcome.accepted,
+                rejection_position=outcome.rejection_position,
+                committed=len(committed),
+                target_cache=target_cache,
+                draft_cache=drafting.cache,
+                duration_ns=released - block_start,
+            )
+
+    end_ns = clock.mark()
+    if options.correctness_checks:
+        _assert_termination(state, config, stop_ids, termination)
+
+    return DecodeResult(
+        run_id=run_id,
+        request_id=request_id,
+        output_ids=tuple(state.committed),
+        token_release_ns=tuple(state.release_ns),
+        termination=termination,  # type: ignore[arg-type]
+        start_ns=start_ns,
+        first_token_ns=state.release_ns[0],
+        last_token_ns=state.release_ns[-1],
+        end_ns=end_ns,
+        proposed=proposed_total,
+        accepted=accepted_total,
+        target_calls=state.target_calls,
+        draft_calls=state.draft_calls,
+        controller_decisions=0,
+        bypass_decisions=0,
+        counters={
+            "prompt_tokens": len(prompt),
+            "blocks": state.blocks,
+            "gamma": gamma,
+            "target_cache_length": target_cache.length,
+            "draft_cache_length": drafting.cache.length if drafting.initialized else None,
+            "draft_initialized": int(drafting.initialized),
+            "correctness_checks": int(options.correctness_checks),
+        },
+    )
+
+
+def _propose_greedy(
+    draft: QwenAdapter,
+    drafting: DraftState,
+    sequence: list[int],
+    width: int,
+    forbidden: Sequence[int],
+    stop_ids: set[int],
+    device: str,
+    state: RequestState,
+) -> list[int]:
+    """Draw up to ``width`` argmax proposals, feeding each back to the draft.
+
+    A proposed stop token ends drafting early (SPEC.md section 4.3 step 5): there
+    is no point proposing past it, since nothing after it could be committed. It
+    is still verified by the target, and the actual number of proposals is what
+    gets recorded.
+    """
+    import torch
+
+    proposals: list[int] = []
+    pending = sequence[-1]
+    for _ in range(width):
+        row = draft.forward(
+            torch.tensor([[pending]], dtype=torch.long, device=device), drafting.cache
+        )
+        state.draft_calls += 1
+        candidate = greedy_token(row[0, -1], forbidden_ids=forbidden)
+        proposals.append(candidate)
+        if candidate in stop_ids:
+            break
+        pending = candidate
+    return proposals
+
+
+def _verify_greedy(rows: Any, proposals: Sequence[int], forbidden: Sequence[int]) -> BlockOutcome:
+    """Compare each proposal with the target's argmax at its own causal prefix.
+
+    ``rows`` is ``[1, g + 1, V]``. Row ``j`` was produced from the token at
+    position ``j`` of the verification input, so it predicts proposal ``j``; row
+    ``g`` predicts the bonus. Using row ``j + 1`` here, or the last row for every
+    comparison, is the off-by-one that produces fluent wrong output.
+    """
+    count = len(proposals)
+    if rows.shape[1] != count + 1:
+        raise AssertionError(
+            f"verification needs {count + 1} rows for {count} proposals, got {rows.shape[1]}"
+        )
+    for index, candidate in enumerate(proposals):
+        expected = greedy_token(rows[0, index], forbidden_ids=forbidden)
+        if expected != candidate:
+            return BlockOutcome(
+                proposed=tuple(proposals),
+                accepted=index,
+                rejection_position=index,
+                emitted=(*proposals[:index], expected),
+                all_accepted=False,
+            )
+    bonus = greedy_token(rows[0, count], forbidden_ids=forbidden)
+    return BlockOutcome(
+        proposed=tuple(proposals),
+        accepted=count,
+        rejection_position=None,
+        emitted=(*proposals, bonus),
+        all_accepted=True,
+    )
+
+
+def _first_stop_index(tokens: Sequence[int], stop_ids: set[int]) -> int | None:
+    """Index of the first stop token, or None. Everything after it is dropped."""
+    for index, token in enumerate(tokens):
+        if token in stop_ids:
+            return index
+    return None
+
+
+def _emit_block(
+    sink: EventSink,
+    state: RequestState,
+    gamma: int,
+    proposed: int,
+    accepted: int,
+    rejection_position: int | None,
+    committed: int,
+    target_cache: CacheHandle,
+    draft_cache: CacheHandle,
+    duration_ns: int,
+) -> None:
+    sink.emit(
+        BlockEvent(
+            request_id=state.request_id,
+            block_id=state.blocks,
+            action="speculative",
+            gamma=gamma,
+            proposed=proposed,
+            accepted=accepted,
+            rejection_position=rejection_position,
+            committed=committed,
+            target_calls=state.target_calls,
+            draft_calls=state.draft_calls,
+            target_cache_after=target_cache.length,
+            draft_cache_after=draft_cache.length,
+            bypass_reason=None,
+            duration_ns=duration_ns,
+        )
+    )
+    state.blocks += 1
