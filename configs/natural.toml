@@ -1,8 +1,10 @@
 # Primary preset: the headline condition from SPEC.md section 9.3.
 #
-# 128 held-out real prompts, greedy, exactly 256 output tokens with EOS suppressed
-# identically in every engine, three repeats. This fixed-length condition is an
-# artificial latency benchmark and must be labelled as such wherever it appears.
+# The same 128 held-out prompts with EOS respected, so completions stop where the
+# model wants to. Output lengths vary between engines, which means total latency
+# alone is not a decode-rate comparison and must be read with tokens/sec and the
+# length distribution. This is the cohort where draft startup cost on short
+# completions can show up as a real loss.
 #
 schema_version = 1
 name = "natural"
@@ -36,7 +38,15 @@ seeds = [42]
 repeats = 3
 
 [run]
-engines = ["hf_ar", "native_ar", "fixed_1", "fixed_2", "fixed_4", "fixed_8", "hf_dynamic", "adaptive"]
+# adaptive_no_bypass is the ablation SPEC.md section 9.3 asks for. It belongs
+# here rather than in the primary cohort: the controller never bypassed once in
+# 384 primary requests, so the two engines were provably identical there.
+# Natural stopping is where bypass could earn its place, because a request that
+# ends after a handful of tokens never recovers the draft prefill.
+engines = [
+    "hf_ar", "native_ar", "fixed_1", "fixed_2", "fixed_4", "fixed_8",
+    "hf_dynamic", "adaptive", "adaptive_no_bypass",
+]
 baseline = "hf_ar"
 warmups = 2
 scheduling_seed = 2026
