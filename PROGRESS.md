@@ -4,16 +4,18 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 through 4 are complete. The execution machine is the DGX Spark itself
+Milestones 1 through 5 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
 Hugging Face reference baselines produce identical greedy token IDs on a
 32-token smoke request.
 
-Fixed greedy speculation works end to end on the real Qwen3 pair and produces
-token-for-token identical output to target-only decoding at draft lengths 1, 2,
-4 and 8. Sampled speculation, the controller, and the benchmark are not built.
+Both greedy and sampled speculation run on the real Qwen3 pair. Greedy output is
+token-for-token identical to target-only decoding; sampled output is verified by
+exhaustive enumeration against the independent oracle, through the real cache
+and softmax. Traces replay offline. The controller and the benchmark are not
+built, and no benchmark has run.
 
 ## Milestones
 
@@ -23,20 +25,21 @@ token-for-token identical output to target-only decoding at draft lengths 1, 2,
 | M2 Sampling oracle | **Complete** | `docs/correctness.md`, 38 oracle tests, 23 property tests |
 | M3 Cached target-only engine | **Complete** | 11 GPU tests, 29 CPU cache tests, `artifacts/pilot/pilot.json` |
 | M4 Fixed greedy speculation | **Complete** | 21 GPU tests, 82 forced-path tests, `artifacts/profile/m4_profile.json` |
-| M5 Sampled speculation and traces | Not started | None |
+| M5 Sampled speculation and traces | **Complete** | 11 GPU tests, exact oracle agreement, `artifacts/traces/`, `artifacts/evidence.json` |
 | M6 Cost controller | Not started | None |
 | M7 Benchmark and report | Not started | Renderer starter file only |
 | M8 Reviewer demo | Not started | None |
 
 ## Next action
 
-Begin M5: connect the production rejection sampler to the GPU loop. Add
-`decode_speculative_sampled` alongside the greedy path, reusing
-`sampling.speculative_block`'s verification logic but sourcing rows from the
-cached adapters. Emit compact block traces and a minimal replay tool. The gate
-is that finite-state multi-step output distributions still match the independent
-oracle when the rows come through the cache, and that cache replay agrees after
-a sampled rejection. Real-model sampled strings need not match any baseline.
+Begin M6: the measured cost controller. Fit acceptance and cost tables from
+calibration data only, implement the `g` selection over `{0, 1, 2, 4, 8}` with
+startup amortization, censored observations and sticky bypass, and freeze the
+profile hash before evaluation. Use fake cost tables to exercise winning
+speculation, target-only preference, initialization cost, insufficient
+observations and remaining-budget clipping, and add a metamorphic test that
+changing a held-out dataset label cannot change a decision given identical
+allowed state. No speed threshold is a correctness gate.
 
 ---
 
@@ -446,6 +449,119 @@ a sampled rejection. Real-model sampled strings need not match any baseline.
   - *Evidence:* `test_the_budget_is_never_exceeded_or_undershot` over budgets
     1, 2, 3, 5, 9, 17 crossed with gamma 1, 2, 4, 8 shows the cap alone produces
     exactly the requested length, so no truncation path is ever needed.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+---
+
+### M5: Sampled speculation and evidence traces
+
+- **Status:** complete.
+
+- **Implementation and decisions:**
+  - `decode_speculative_sampled` delegates candidate choice, acceptance and
+    correction to `sampling.speculative_block` -- the function the oracle
+    enumerates -- rather than reimplementing it. A thin `_ProposalRecorder`
+    observes the proposal stream so the target's row provider can issue its
+    single batched forward call once every proposal is drawn, and it asserts
+    that ordering instead of assuming it.
+  - `traces.py` writes JSONL block traces **after** the timed region and
+    replays them offline with no model, GPU or network. The prompt is stored
+    as a length and a SHA-256 only, so a trace is shareable without
+    redistributing dataset text.
+  - `evidence.py` produces the renderer's `evidence.json` by executing the
+    named commands and recording exit codes. A category with no checks does not
+    pass by default, and a CPU-only run records `gpu_checks_included=false`.
+  - One deliberate asymmetry: the greedy engine stops drafting early on a
+    proposed stop token, the sampled engine does not. Stopping early in sampled
+    mode would mean forking the enumerated function; the cost is a few wasted
+    draft calls in a request that is about to end, and it appears in the
+    counters.
+
+- **Commands actually run:**
+  ```
+  python -m pytest tests/unit/test_sampled_speculation.py -q
+  python -m pytest tests/unit/test_traces.py tests/unit/test_evidence.py -q
+  python -m pytest tests/integration/test_sampled_speculation_gpu.py -q -m gpu
+  python -m pytest -m 'not gpu and not download' -q
+  python -m pytest -m gpu -q
+  python -m switchback trace --mode greedy  --gamma 4 --max-new-tokens 96 ...
+  python -m switchback trace --mode sample --gamma 4 --max-new-tokens 96 ...
+  python -m switchback replay artifacts/traces/greedy_g4.jsonl
+  python -m switchback evidence --gpu --out artifacts/evidence.json
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 442 CPU tests and 54 GPU tests pass. ruff, format and mypy clean.
+  - **The milestone gate holds, and it is exact.** The sampled decoder, driven
+    through its own cache ledger, softmax, crop and catch-up, reproduces the
+    target sequence distribution with total variation distance **0** on six
+    random tree pairs at two draft lengths and six constructed cases at three
+    draft lengths. No tolerance is used. Exactness survives the softmax because
+    every scripted row is uniform over a subset of size 1, 2 or 4, which FP32
+    represents without error.
+  - Block length does not change the law: gamma 1 and gamma 2 agree exactly.
+  - **Three real bugs found during this milestone, two of them by the replay
+    checker rather than by any test:**
+    1. `TorchRandomSource.categorical` built its inverse-CDF search value with a
+       bare `torch.tensor()`, which defaults to CPU. Every sampled test until
+       now had run on CPU, so the first CUDA request was the first failure.
+    2. On EOS the target cache was cropped to `len(S) + accepted`, one position
+       too long whenever the committed EOS truncated the block. Found by
+       replaying a saved trace.
+    3. The replay checker itself compared the draft cache against the target's
+       boundary, which is wrong after a target-only step. Fixed, and the
+       converse rule -- drafting *after* a target-only step, which would
+       silently collapse acceptance -- is now asserted in both engines.
+  - The mutation check initially failed to detect a residual replaced by an
+    argmax, because that tree pair produced only single-token residuals where
+    the two coincide. Fixed with constructed cases plus a test that asserts
+    multi-token residuals are exercised.
+  - A GPU assertion that three seeds give three distinct completions failed
+    correctly and was relaxed: at temperature 0.7 on a deterministic code prompt
+    two seeds legitimately produce the same 48 tokens.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:**
+  - `artifacts/traces/greedy_g4.jsonl` and `artifacts/traces/sampled_g4.jsonl`.
+    46-token prompt, 96-token budget, EOS suppressed. Greedy accepted 73 of 87
+    proposals with rejections at all four candidate positions; sampled at
+    temperature 0.7 accepted 71 of 90. Both replay clean.
+  - `artifacts/evidence.json`: ten executed validation commands, all passing,
+    including both GPU suites, plus the measured numerical facts and their
+    source tests.
+  - **No benchmark has run.** These are correctness artifacts.
+
+- **Source commit:** recorded in each trace header and in `evidence.json`.
+
+- **Known limitations and blockers:**
+  - No controller: gamma is fixed for the whole request, and there is no bypass.
+  - The exact enumeration uses rows that FP32 represents without error. Real
+    softmax outputs are not dyadic, and no exactness claim is made for them.
+  - The sampled engine validates every distribution it touches, which the greedy
+    engine does not need to. That asymmetry must be disclosed if the two are
+    ever timed against each other.
+  - `artifacts/evidence.json` records exit codes. It cannot prove the
+    acquisition code is honest.
+
+- **Next concrete step:** the measured cost controller for M6.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* have the GPU sampled path call the same `speculative_block` the
+    oracle enumerates, using a recorder to reconstruct the proposal list, rather
+    than writing a second copy of the verification logic inside the decoder.
+  - *Alternative considered:* a decoder-local block loop mirroring the greedy
+    one, with a test asserting that the two implementations agree.
+  - *Failure mode:* two copies drift. The oracle would keep certifying the pure
+    function while the GPU path slowly diverged from it, and the divergence
+    would show up as a distribution bias that greedy conformance cannot see and
+    that only an enumeration of the *decoder* would catch.
+  - *Evidence:* `test_sampled_speculation_reproduces_the_target_distribution`
+    enumerates the decoder itself, not the pure sampler, and
+    `test_a_broken_residual_is_detected_by_this_gate` swaps the residual draw for
+    an argmax and requires the gate to fail -- on a pair chosen so the residual
+    has three-token support, because the first attempt used a pair where the two
+    coincide and the mutation went undetected.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
