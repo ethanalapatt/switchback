@@ -200,17 +200,90 @@ def load_run(root, allow_fixture):
     cells = defaultdict(dict)
     for row in rows:
         cells[key(row)[:-1]][row["engine"]] = row
+    bound = manifest.get("max_chosen_token_gap")
+    require(
+        bound is None or (isinstance(bound, (int, float)) and bound > 0),
+        "max_chosen_token_gap must be a positive number when present",
+    )
     for cell, members in cells.items():
         require(set(members) == set(engines), f"Missing paired engines for {cell}")
         if cell[2] == "greedy":
             reference = members[baseline]["output_ids"]
             for engine, row in members.items():
-                require(
-                    row["output_ids"] == reference,
-                    f"Greedy output mismatch: {cell}, {engine}; "
-                    f"investigate before publishing speedup",
-                )
+                if row["output_ids"] == reference:
+                    continue
+                check_greedy_divergence(cell, engine, row, reference, bound)
     return manifest, evidence, rows
+
+
+def first_difference(left, right):
+    for index, (a, b) in enumerate(zip(left, right, strict=False)):
+        if a != b:
+            return index
+    return min(len(left), len(right))
+
+
+def check_greedy_divergence(cell, engine, row, reference, bound):
+    """A greedy mismatch is admissible only as a documented near-tie.
+
+    Greedy speculation is exact in real arithmetic, so a mismatch is either
+    floating point or a bug. The two are distinguished by the logit gap between
+    the tokens the engines actually chose: inside BF16 reduction-order noise it
+    is floating point; outside it is not (ADR 0004).
+
+    The runner records that gap. This function refuses a mismatch that carries
+    no evidence, whose evidence points at a different position than the actual
+    first difference, or whose gap exceeds the bound the manifest declared. A
+    run that does not declare a bound keeps the original strict behaviour: any
+    greedy mismatch is refused.
+    """
+    label = f"Greedy output mismatch: {cell}, {engine}"
+    require(
+        bound is not None,
+        f"{label}; the manifest declares no max_chosen_token_gap, so no "
+        f"mismatch is admissible. Investigate before publishing a speedup.",
+    )
+    divergence = row.get("greedy_divergence")
+    require(
+        isinstance(divergence, dict),
+        f"{label}; no recorded divergence evidence. A mismatch without evidence "
+        f"is a bug, not a near-tie.",
+    )
+    index = divergence.get("index")
+    expected_index = first_difference(reference, row["output_ids"])
+    require(
+        is_int(index) and index == expected_index,
+        f"{label}; recorded divergence index {index} is not the first actual "
+        f"difference at {expected_index}.",
+    )
+    require(
+        divergence.get("reference_token") == reference[expected_index]
+        and divergence.get("candidate_token") == row["output_ids"][expected_index],
+        f"{label}; recorded divergence names different tokens than the outputs do.",
+    )
+    gap = divergence.get("chosen_token_gap")
+    require(
+        isinstance(gap, (int, float)) and gap >= 0,
+        f"{label}; recorded divergence has no usable chosen_token_gap.",
+    )
+    require(
+        gap <= bound,
+        f"{label}; the engines chose tokens {gap} logits apart, beyond the "
+        f"declared near-tie bound of {bound}. That is not floating point.",
+    )
+
+
+def conformance_rate(rows, baseline_engine, cells):
+    """Fraction of greedy cells where an engine matched the baseline exactly."""
+    matched = 0
+    total = 0
+    for row in rows:
+        members = cells.get(key(row)[:-1])
+        if members is None or row["mode"] != "greedy":
+            continue
+        total += 1
+        matched += row["output_ids"] == members[baseline_engine]["output_ids"]
+    return (matched / total) if total else None
 
 
 def render(manifest, evidence, rows):
@@ -304,9 +377,9 @@ def render(manifest, evidence, rows):
             lines.append("| " + " | ".join(values) + " |")
         lines += [
             "",
-            "| Engine | Accepted/proposed | Output tokens/target call | Bypass decisions | "
-            "Requests with bypass | Peak allocated MiB | Peak reserved MiB |",
-            "|---|---:|---:|---:|---:|---:|---:|",
+            "| Engine | Greedy match | Accepted/proposed | Output tokens/target call | "
+            "Bypass decisions | Requests with bypass | Peak allocated MiB | Peak reserved MiB |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for engine in manifest["required_engines"]:
             sample = by_engine[engine]
@@ -328,11 +401,20 @@ def render(manifest, evidence, rows):
                 peaks.append(
                     None if any(value is None for value in values) else max(values) / 2**20
                 )
+            matched = None
+            if group[2] == "greedy":
+                reference_by_cell = {key(row)[:-1]: row["output_ids"] for row in reference}
+                comparable = [row for row in sample if key(row)[:-1] in reference_by_cell]
+                if comparable:
+                    matched = sum(
+                        row["output_ids"] == reference_by_cell[key(row)[:-1]] for row in comparable
+                    ) / len(comparable)
             lines.append(
                 "| "
                 + " | ".join(
                     [
                         safe(engine),
+                        "N/A" if matched is None else f"{100 * matched:.1f}%",
                         fmt(accepted),
                         fmt(calls),
                         fmt(bypass),
@@ -366,6 +448,22 @@ def render(manifest, evidence, rows):
                 else "Adaptive latency improvement is inconclusive at this interval."
             )
             lines += [conclusion, ""]
+    if manifest.get("max_chosen_token_gap") is not None:
+        lines += [
+            "## Greedy conformance",
+            "",
+            "Greedy speculation is exact in real arithmetic. In BF16 it is not: a target-only "
+            "step computes its logits in a width-1 forward while a verification step computes "
+            "them inside a wider one, and when the top two logits are within that noise the "
+            "argmax flips. The `Greedy match` column above is the measured fraction of requests "
+            "whose token ids were identical to the baseline's.",
+            "",
+            f"Every mismatch in this run was checked against a near-tie bound of "
+            f"{manifest['max_chosen_token_gap']} logits between the two tokens the engines "
+            f"actually chose. A mismatch with no recorded evidence, or one beyond that bound, "
+            f"is refused rather than reported. See docs/decisions/0004-bf16-greedy-conformance.md.",
+            "",
+        ]
     lines += [
         "## Limits",
         "",
