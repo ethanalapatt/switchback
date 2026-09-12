@@ -260,6 +260,148 @@ def command_profile(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_trace(args: argparse.Namespace) -> int:
+    """Run one request and save a replayable block trace."""
+    from switchback.decoder import (
+        EngineOptions,
+        decode_speculative_greedy,
+        decode_speculative_sampled,
+        decode_target_only,
+    )
+    from switchback.events import ListSink
+    from switchback.pilot import load_pair
+    from switchback.traces import build_header, write_trace
+    from switchback.types import DecodeConfig
+
+    configure_torch_native_overrides()
+    deterministic_runtime()
+    manifest = load_manifest(args.manifest)
+    target_entry = manifest["models"]["target"]
+    draft_entry = manifest["models"]["draft"]
+    target, draft, _, _ = load_pair(
+        target_entry["repo_id"],
+        target_entry["revision"],
+        draft_entry["repo_id"],
+        draft_entry["revision"],
+        device=args.device,
+        dtype=args.dtype,
+        attn_implementation=args.attn,
+        local_files_only=args.local_files_only,
+    )
+    target_adapter = QwenAdapter(
+        model=target.model,
+        device=args.device,
+        vocab_size=target.logits_vocab_size,
+        name="target",
+    )
+    draft_adapter = QwenAdapter(
+        model=draft.model,
+        device=args.device,
+        vocab_size=draft.logits_vocab_size,
+        name="draft",
+    )
+    config = DecodeConfig(
+        mode=args.mode,
+        temperature=args.temperature,
+        max_new_tokens=args.max_new_tokens,
+        eos_policy=args.eos_policy,
+        seed=args.seed,
+    )
+    options = EngineOptions(correctness_checks=True, device=args.device)
+    prompt_ids = render_chat_prompt(target.tokenizer, args.prompt)
+    sink = ListSink()
+    if args.gamma == 0:
+        engine = "native_ar"
+        result = decode_target_only(
+            target_adapter,
+            prompt_ids,
+            config,
+            target.eos_token_ids,
+            sink=sink,
+            options=options,
+        )
+    elif args.mode == "greedy":
+        engine = f"fixed_{args.gamma}"
+        result = decode_speculative_greedy(
+            target_adapter,
+            draft_adapter,
+            prompt_ids,
+            config,
+            target.eos_token_ids,
+            gamma=args.gamma,
+            sink=sink,
+            options=options,
+        )
+    else:
+        engine = f"fixed_{args.gamma}"
+        result = decode_speculative_sampled(
+            target_adapter,
+            draft_adapter,
+            prompt_ids,
+            config,
+            target.eos_token_ids,
+            gamma=args.gamma,
+            sink=sink,
+            options=options,
+        )
+    header = build_header(
+        engine=engine,
+        result=result,
+        prompt_ids=prompt_ids,
+        mode=args.mode,
+        eos_policy=args.eos_policy,
+        temperature=args.temperature,
+        seed=args.seed,
+        gamma=args.gamma or None,
+        max_new_tokens=args.max_new_tokens,
+        models={
+            "target": {"repo_id": target_entry["repo_id"], "revision": target_entry["revision"]},
+            "draft": {"repo_id": draft_entry["repo_id"], "revision": draft_entry["revision"]},
+        },
+    )
+    write_trace(args.out, header, sink)
+    print(f"  engine      {engine}")
+    print(f"  output      {len(result.output_ids)} tokens, terminated on {result.termination}")
+    print(f"  acceptance  {result.accepted}/{result.proposed}")
+    print(f"  calls       target={result.target_calls} draft={result.draft_calls}")
+    print(f"  wrote {args.out}")
+    return 0
+
+
+def command_replay(args: argparse.Namespace) -> int:
+    """Check a saved trace offline: no model, no GPU, no network."""
+    from switchback.traces import block_summary, format_replay, read_trace, replay_trace
+
+    header, blocks = read_trace(args.trace)
+    report = replay_trace(header, blocks)
+    print(format_replay(header, report))
+    summary = block_summary(blocks)
+    print(
+        f"  blocks      {summary['speculative_blocks']} speculative, "
+        f"{summary['rejected_blocks']} rejected, "
+        f"{summary['fully_accepted_blocks']} fully accepted"
+    )
+    if summary["rejections_by_position"]:
+        print(f"  rejections  by position {summary['rejections_by_position']}")
+    return 0 if report.ok else 1
+
+
+def command_evidence(args: argparse.Namespace) -> int:
+    """Run the validation checks and record their exit codes."""
+    from switchback.evidence import collect_evidence, format_evidence, write_evidence
+
+    document = collect_evidence(
+        python=sys.executable,
+        include_gpu=args.gpu,
+        artifacts=list(args.artifact),
+        notes=args.notes,
+    )
+    print(format_evidence(document))
+    write_evidence(document, args.out)
+    print(f"  wrote {args.out}")
+    return 0 if document["passed"] else 1
+
+
 def command_demo(args: argparse.Namespace) -> int:
     """Offline fixture check: builds the tiny model twice and compares logits."""
     import torch
@@ -351,6 +493,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
     profile.add_argument("--out", type=Path, default=Path("artifacts/profile/m4_profile.json"))
     profile.set_defaults(handler=command_profile)
+
+    trace = subparsers.add_parser("trace", help="run one request and save a block trace")
+    trace.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    trace.add_argument("--device", default="cuda")
+    trace.add_argument("--dtype", default="bfloat16")
+    trace.add_argument("--attn", default="sdpa")
+    trace.add_argument("--local-files-only", action="store_true")
+    trace.add_argument("--mode", choices=["greedy", "sample"], default="greedy")
+    trace.add_argument("--temperature", type=float, default=1.0)
+    trace.add_argument("--max-new-tokens", type=int, default=64)
+    trace.add_argument(
+        "--eos-policy", choices=["respect", "suppress_until_budget"], default="respect"
+    )
+    trace.add_argument("--seed", type=int, default=42)
+    trace.add_argument("--gamma", type=int, default=4, help="0 runs target-only decoding")
+    trace.add_argument(
+        "--prompt",
+        default="Write a Python function for this task. Return code only. Reverse a string.",
+    )
+    trace.add_argument("--out", type=Path, default=Path("artifacts/traces/trace.jsonl"))
+    trace.set_defaults(handler=command_trace)
+
+    replay = subparsers.add_parser(
+        "replay", help="check a saved trace offline; no model or GPU needed"
+    )
+    replay.add_argument("trace", type=Path)
+    replay.set_defaults(handler=command_replay)
+
+    evidence = subparsers.add_parser(
+        "evidence", help="run the validation checks and record their exit codes"
+    )
+    evidence.add_argument("--gpu", action="store_true", help="include the GPU gates")
+    evidence.add_argument(
+        "--artifact", action="append", default=[], help="path to reference in the evidence"
+    )
+    evidence.add_argument("--notes", default="")
+    evidence.add_argument("--out", type=Path, default=Path("artifacts/evidence.json"))
+    evidence.set_defaults(handler=command_evidence)
 
     demo = subparsers.add_parser("demo", help="offline tiny-model fixture check")
     demo.add_argument("--seed", type=int, default=1234)
