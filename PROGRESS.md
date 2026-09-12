@@ -4,17 +4,16 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1, 2 and 3 are complete. The execution machine is the DGX Spark itself
+Milestones 1 through 4 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
 Hugging Face reference baselines produce identical greedy token IDs on a
 32-token smoke request.
 
-The sampling core and the independent exact oracle are implemented and
-exhaustively enumerated against each other. The cached target-only engine runs
-on the real Qwen3-4B and produces token-for-token identical greedy output to the
-Hugging Face baseline on a frozen smoke set. No speculation exists yet.
+Fixed greedy speculation works end to end on the real Qwen3 pair and produces
+token-for-token identical output to target-only decoding at draft lengths 1, 2,
+4 and 8. Sampled speculation, the controller, and the benchmark are not built.
 
 ## Milestones
 
@@ -23,7 +22,7 @@ Hugging Face baseline on a frozen smoke set. No speculation exists yet.
 | M1 Hardware and baseline | **Complete** | `artifacts/environment.json`, `artifacts/model_check.json`, `artifacts/pilot/pilot.json`, 11 GPU tests |
 | M2 Sampling oracle | **Complete** | `docs/correctness.md`, 38 oracle tests, 23 property tests |
 | M3 Cached target-only engine | **Complete** | 11 GPU tests, 29 CPU cache tests, `artifacts/pilot/pilot.json` |
-| M4 Fixed greedy speculation | Not started | None |
+| M4 Fixed greedy speculation | **Complete** | 21 GPU tests, 82 forced-path tests, `artifacts/profile/m4_profile.json` |
 | M5 Sampled speculation and traces | Not started | None |
 | M6 Cost controller | Not started | None |
 | M7 Benchmark and report | Not started | Renderer starter file only |
@@ -31,12 +30,13 @@ Hugging Face baseline on a frozen smoke set. No speculation exists yet.
 
 ## Next action
 
-Begin M4: fixed greedy speculation at lengths 1, 2, 4 and 8, with transactional
-commit and crop. Use fake model adapters to force rejection at every position,
-all-accept, accepted EOS, rejected EOS, and budget termination. The gate is
-exact greedy token agreement with `native_ar` for every fixed length on the
-frozen set, plus a test that the target verification really is one forward call
-of width `g + 1` and that caches never hold a rejected suffix at a boundary.
+Begin M5: connect the production rejection sampler to the GPU loop. Add
+`decode_speculative_sampled` alongside the greedy path, reusing
+`sampling.speculative_block`'s verification logic but sourcing rows from the
+cached adapters. Emit compact block traces and a minimal replay tool. The gate
+is that finite-state multi-step output distributions still match the independent
+oracle when the rows come through the cache, and that cache replay agrees after
+a sampled rejection. Real-model sampled strings need not match any baseline.
 
 ---
 
@@ -349,6 +349,103 @@ of width `g + 1` and that caches never hold a rejected suffix at a boundary.
     logits to be bitwise equal to the un-poisoned ones; `test_a_stale_suffix_
     actually_changes_the_logits` confirms the poison was not a no-op, so the
     first test cannot pass vacuously.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+---
+
+### M4: Fixed greedy speculation
+
+- **Status:** complete.
+
+- **Implementation and decisions:**
+  - `decode_speculative_greedy` in `decoder.py`. Per block: draft `g` proposals
+    autoregressively, verify them in **one** target forward call of width
+    `g + 1`, commit the matching prefix plus the target's own token, crop both
+    caches to `len(S) + accepted`.
+  - Row `j` of the verification output predicts proposal `j`; row `g` predicts
+    the bonus. There are `g + 1` rows, not `g`.
+  - On full acceptance the draft is one candidate behind and pays a catch-up
+    forward call. It is counted, not hidden, because milestone 6's cost model
+    depends on it.
+  - The block length is capped at `remaining - 1` and a lone remaining token
+    takes a target-only step. This is not only bookkeeping: truncating an
+    overlong block would condition on the future and break the distribution
+    argument in `docs/correctness.md` section 3.
+  - A proposed stop token ends drafting early but is still verified; the actual
+    proposal count is recorded.
+  - `profiling.py` is a separate diagnostic pass that reimplements the block, so
+    the production loop carries no profiling branches.
+
+- **Commands actually run:**
+  ```
+  python -m pytest tests/unit/test_speculation_paths.py -q
+  python -m pytest tests/integration/test_speculation_cpu.py -q
+  python -m pytest tests/integration/test_speculation_gpu.py -q -m gpu
+  python -m pytest -m 'not gpu and not download' -q
+  python -m switchback profile --local-files-only --blocks 16
+  python -m ruff check . && python -m ruff format --check . && python -m mypy src/switchback
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 351 CPU tests pass (82 forced-path, 49 real-model CPU). 21 new GPU tests
+    pass. ruff, format and mypy clean.
+  - **The milestone gate holds:** on the real Qwen3-4B/0.6B pair, fixed
+    speculation at gamma 1, 2, 4 and 8 produces token-identical output to
+    `native_ar` at two context lengths, and to `hf_ar` as well.
+  - Forced paths covered: rejection at each position 0..g-1, full acceptance,
+    catch-up present and absent, accepted EOS, EOS inside a rejected suffix,
+    suppressed EOS, budget exhaustion at every length, a request that ends
+    before the draft is initialized, and a deliberately wrong crop that must
+    raise rather than emit fluent output.
+  - A GPU test asserts a rejection actually occurred during the run, so the
+    rollback path cannot be silently untested.
+  - Failed and fixed during the milestone: the first version of the forced-path
+    tests used a budget of `gamma + 1`, which the `remaining - 1` cap shortens
+    to a block of width `gamma - 1`; eleven tests were asserting against a block
+    that never existed. Fixed by using `gamma + 2`, the smallest budget that
+    admits a full-width block.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:** `artifacts/profile/m4_profile.json`.
+  Diagnostic pass, one prompt, a synchronization between every stage, so the
+  totals are inflated and are **not** a latency result. What it establishes:
+  - A target forward costs about 45 ms at width 1 and about 46 ms at width 9.
+    Verification is nearly free on the target side. This is the mechanism that
+    makes speculation worth anything on this hardware.
+  - A draft forward costs about 11.7 ms: roughly 4x cheaper than the target per
+    call, not the 7x the parameter ratio suggests.
+  - Commit and crop costs 0.3 to 1.1 ms. Cache bookkeeping is not the cost.
+  - The catch-up call is a flat 11.6 ms and is paid on most blocks at the
+    74-81% acceptance observed here. It is a real term, not a rounding error.
+
+- **Source commit:** recorded in `artifacts/profile/m4_profile.json`.
+
+- **Known limitations and blockers:**
+  - Greedy only. `decode_speculative_greedy` refuses sampled configurations
+    rather than silently approximating them.
+  - No controller: gamma is fixed for the whole request.
+  - The profile is one prompt on one machine with extra synchronizations. It is
+    input to the M6 cost model, not a performance claim.
+  - The acceptance rate in the profile (74-81%) comes from a single short code
+    prompt and will not hold across the M7 cohort.
+
+- **Next concrete step:** sampled speculation and traces for M5.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* cap the block length at `remaining - 1` instead of generating a
+    full block and truncating whatever overshoots the budget.
+  - *Alternative considered:* always draft `gamma`, then cut the emitted tokens
+    down to the budget. Simpler, and the output length is identical.
+  - *Failure mode:* truncation is a decision made *after* seeing the tokens, so
+    it conditions the output on the future. The distribution argument works by
+    showing each emitted token is drawn from the target conditional on its own
+    prefix; discarding tokens based on what was produced breaks that, and the
+    bias would be invisible in greedy mode and only appear in the sampled
+    oracle checks in M5.
+  - *Evidence:* `test_the_budget_is_never_exceeded_or_undershot` over budgets
+    1, 2, 3, 5, 9, 17 crossed with gamma 1, 2, 4, 8 shows the cap alone produces
+    exactly the requested length, so no truncation path is ever needed.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
