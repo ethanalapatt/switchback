@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "switchback"
+version = "0.1.0"
+description = "An auditable speculative decoding engine that measures when drafting accelerates local LLM inference."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ethan Alapatt" }]
+
+# NOTE: `torch` is deliberately specified with a lower bound only.
+# The DGX Spark (aarch64 / GB10 Blackwell) requires the NVIDIA-compatible
+# +cu130 build from download.pytorch.org. A pinned `==` here would let pip
+# replace that working install with an incompatible generic PyPI wheel.
+# The exact verified build is recorded in requirements-spark.lock.
+dependencies = [
+    "torch>=2.9",
+    "transformers==4.57.1",
+    "tokenizers>=0.22,<0.23",
+    "numpy>=1.26",
+    "safetensors>=0.4",
+    "huggingface-hub>=0.35",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[project.scripts]
+switchback = "switchback.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gpu: requires a CUDA device; never satisfied by a skip",
+    "download: requires downloading public model weights or datasets",
+    "slow: long-running check excluded from the fast local loop",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "bench", "scripts", "tests"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["switchback"]
+mypy_path = "src"
+strict = false
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+ignore_missing_imports = true
