@@ -160,6 +160,12 @@ def replay_trace(header: dict[str, Any], blocks: list[dict[str, Any]]) -> Replay
     ``prompt + committed - 1`` at every boundary; and the committed tokens sum
     to the recorded output length.
 
+    The draft cache is modelled separately from the target's, because a
+    target-only step feeds the pending token to the target alone and leaves the
+    draft where it was. That is correct at the end of a request and is how the
+    engines use it; drafting *after* such a step would condition every proposal
+    on a stale prefix, so that combination is reported.
+
     A block flagged ``terminal`` is held to relaxed but still specific rules,
     because ending on a committed EOS legitimately truncates the block and skips
     the draft catch-up. The exceptions are named rather than blanket: a terminal
@@ -171,6 +177,7 @@ def replay_trace(header: dict[str, Any], blocks: list[dict[str, Any]]) -> Replay
     committed = 0
     accepted = 0
     proposed = 0
+    previous_draft: int | None = None
 
     for index, block in enumerate(blocks):
         label = f"block {index}"
@@ -199,6 +206,8 @@ def replay_trace(header: dict[str, Any], blocks: list[dict[str, Any]]) -> Replay
                 problems.append(
                     f"{label}: committed {block['committed']} for {block['accepted']} accepted"
                 )
+        # The boundary this block started from, before it committed anything.
+        start_expected = prompt_tokens + committed - 1
         committed += block["committed"]
         accepted += block["accepted"]
         proposed += block["proposed"]
@@ -211,14 +220,30 @@ def replay_trace(header: dict[str, Any], blocks: list[dict[str, Any]]) -> Replay
             )
         draft_length = block["draft_cache_after"]
         if draft_length is not None:
-            # On a terminal block the draft's catch-up call is skipped on
-            # purpose, so its cache is allowed to be one position short.
-            lower = expected_length - 1 if terminal else expected_length
-            if not lower <= draft_length <= expected_length:
+            if block["action"] == "speculative":
+                # On a terminal block the draft's catch-up call is skipped on
+                # purpose, so its cache is allowed to be one position short.
+                lower = expected_length - 1 if terminal else expected_length
+                if not lower <= draft_length <= expected_length:
+                    problems.append(
+                        f"{label}: draft cache is {draft_length}, expected "
+                        + (f"{lower} or {expected_length}" if terminal else str(expected_length))
+                    )
+                if previous_draft is not None and previous_draft != start_expected:
+                    problems.append(
+                        f"{label}: drafted from a cache at {previous_draft} when the "
+                        f"block started at boundary {start_expected}; a target-only "
+                        f"step does not advance the draft cache"
+                    )
+            elif previous_draft is not None and draft_length != previous_draft:
+                # A target-only step feeds the pending token to the target only.
+                # The draft cache must be exactly where the previous block left
+                # it, which is what makes it stale for any later speculation.
                 problems.append(
-                    f"{label}: draft cache is {draft_length}, expected "
-                    + (f"{lower} or {expected_length}" if terminal else str(expected_length))
+                    f"{label}: a target-only step moved the draft cache from "
+                    f"{previous_draft} to {draft_length}"
                 )
+        previous_draft = draft_length
 
     if committed != len(header["output_ids"]):
         problems.append(

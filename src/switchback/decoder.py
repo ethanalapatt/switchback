@@ -407,7 +407,14 @@ def decode_speculative_greedy(
                 )
                 state.draft_calls += 1
                 drafting.initialized = True
-                drafting.cache.assert_boundary(sequence[: len(prompt) + 1])
+
+            # The draft must be at the same boundary as the target before it
+            # proposes anything. A target-only step does not advance the draft
+            # cache, so drafting after one would condition every proposal on a
+            # stale prefix. That would not corrupt the output -- the target
+            # verifies everything -- but it would quietly destroy acceptance,
+            # which is exactly the kind of bug a latency study cannot see.
+            drafting.cache.assert_boundary(sequence)
 
             proposals = _propose_greedy(
                 draft, drafting, sequence, width, forbidden, stop_ids, device, state
@@ -768,6 +775,10 @@ def decode_speculative_sampled(
                 )
                 state.draft_calls += 1
                 drafting.initialized = True
+
+            # See the note in the greedy engine: drafting after a target-only
+            # step would condition proposals on a stale prefix.
+            drafting.cache.assert_boundary(sequence)
 
             recorder = _ProposalRecorder(source)
             base = tuple(sequence)

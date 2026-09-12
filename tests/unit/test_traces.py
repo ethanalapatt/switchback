@@ -377,3 +377,135 @@ def test_the_trace_is_written_atomically(tmp_path: Path) -> None:
     path = saved(tmp_path, consistent_events())
     assert path.exists()
     assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_a_target_only_step_must_not_advance_the_draft_cache(tmp_path: Path) -> None:
+    """The draft is not fed during a target-only step, so its cache stays put."""
+    sink = ListSink()
+    sink.events.append(
+        block(
+            0,
+            action="prefill",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT),
+            draft_cache=None,
+        )
+    )
+    sink.events.append(
+        block(
+            1,
+            accepted=2,
+            proposed=2,
+            committed=3,
+            target_cache=len(PROMPT) + 3,
+            draft_cache=len(PROMPT) + 3,
+        )
+    )
+    # A final target-only step: the target advances by one, the draft does not.
+    sink.events.append(
+        block(
+            2,
+            action="target_only",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT) + 4,
+            draft_cache=len(PROMPT) + 3,
+        )
+    )
+    header, blocks = read_trace(saved(tmp_path, sink))
+    assert replay_trace(header, blocks).ok
+
+
+def test_a_target_only_step_that_moved_the_draft_is_caught(tmp_path: Path) -> None:
+    sink = ListSink()
+    sink.events.append(
+        block(
+            0,
+            action="prefill",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT),
+            draft_cache=None,
+        )
+    )
+    sink.events.append(
+        block(
+            1,
+            accepted=2,
+            proposed=2,
+            committed=3,
+            target_cache=len(PROMPT) + 3,
+            draft_cache=len(PROMPT) + 3,
+        )
+    )
+    sink.events.append(
+        block(
+            2,
+            action="target_only",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT) + 4,
+            draft_cache=len(PROMPT) + 4,
+        )
+    )
+    header, blocks = read_trace(saved(tmp_path, sink))
+    report = replay_trace(header, blocks)
+    assert not report.ok
+    assert any("moved the draft cache" in problem for problem in report.problems)
+
+
+def test_drafting_from_a_stale_cache_is_caught(tmp_path: Path) -> None:
+    """Speculating after a target-only step would use a stale prefix.
+
+    The output would still be correct, because the target verifies every
+    candidate. Acceptance would collapse, which a latency study would see only
+    as an unexplained slowdown. The replay checker names it instead.
+    """
+    sink = ListSink()
+    sink.events.append(
+        block(
+            0,
+            action="prefill",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT),
+            draft_cache=None,
+        )
+    )
+    sink.events.append(
+        block(
+            1,
+            action="target_only",
+            gamma=0,
+            proposed=0,
+            accepted=0,
+            committed=1,
+            target_cache=len(PROMPT) + 1,
+            draft_cache=len(PROMPT),
+        )
+    )
+    sink.events.append(
+        block(
+            2,
+            accepted=2,
+            proposed=2,
+            committed=3,
+            target_cache=len(PROMPT) + 4,
+            draft_cache=len(PROMPT) + 4,
+        )
+    )
+    header, blocks = read_trace(saved(tmp_path, sink))
+    report = replay_trace(header, blocks)
+    assert not report.ok
+    assert any("target-only" in problem for problem in report.problems)
