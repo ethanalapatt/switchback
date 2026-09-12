@@ -88,12 +88,24 @@ def explicit_generation_config(
 ) -> Any:
     """A ``GenerationConfig`` in which nothing is inherited.
 
-    ``eos_policy='suppress_until_budget'`` removes every stop token, which is
-    how the fixed-length latency condition in SPEC.md section 9.3 produces
-    exactly ``max_new_tokens`` tokens for every engine. A minimum-length
-    constraint is deliberately *not* used: Transformers' assisted generation
-    refuses a minimum-length logits processor, so requiring one would silently
-    exclude the ``hf_dynamic`` baseline from the matched comparison.
+    ``eos_policy='suppress_until_budget'`` does two distinct things, and both
+    are needed for the fixed-length condition of SPEC.md section 9.3 to be the
+    *same* condition in every engine:
+
+    * ``eos_token_id=None`` stops generation from ending early;
+    * ``suppress_tokens`` masks the stop tokens out of the logits so they are
+      never emitted at all.
+
+    Dropping the second is what Transformers does by default, and it is not
+    equivalent. Switchback's sampler applies the EOS policy to the distribution
+    (SPEC.md section 4.1), so without ``suppress_tokens`` the baseline would
+    happily emit ``<|im_end|>`` mid-sequence while the native engine picked its
+    highest-scoring non-stop token, and the greedy conformance check would fail
+    on a difference of policy rather than of implementation.
+
+    A minimum-length constraint is deliberately *not* used: Transformers'
+    assisted generation refuses a minimum-length logits processor, so requiring
+    one would silently exclude the ``hf_dynamic`` baseline from the comparison.
     """
     from transformers import GenerationConfig
 
@@ -124,6 +136,7 @@ def explicit_generation_config(
         min_length=0,
         use_cache=True,
         eos_token_id=None if suppress else list(eos_token_ids),
+        suppress_tokens=sorted(eos_token_ids) if suppress else None,
         pad_token_id=pad_token_id,
         bos_token_id=None,
         renormalize_logits=False,

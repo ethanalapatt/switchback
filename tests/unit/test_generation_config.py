@@ -68,11 +68,17 @@ def test_temperature_is_carried_through_in_sample_mode() -> None:
 def test_respect_policy_keeps_every_stop_token() -> None:
     generation = explicit_generation_config(config(), EOS, 151643)
     assert generation.eos_token_id == list(EOS)
+    assert generation.suppress_tokens is None
 
 
 def test_suppress_policy_removes_stop_tokens_without_a_minimum_length() -> None:
     generation = explicit_generation_config(config(eos_policy="suppress_until_budget"), EOS, 151643)
     assert generation.eos_token_id is None
+    # Not stopping on EOS is not the same as not emitting it. Switchback's
+    # sampler masks stop tokens out of the distribution, so the baseline must
+    # too, or the greedy conformance check fails on a policy difference rather
+    # than an implementation one.
+    assert generation.suppress_tokens == sorted(EOS)
     # A non-None min_new_tokens makes Transformers derive min_length from the
     # prompt and install a processor that assisted generation refuses.
     assert generation.min_new_tokens is None
