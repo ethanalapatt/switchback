@@ -6,7 +6,7 @@ What this project claims, in four separate levels, and what backs each one.
 |---|---|---|
 | 1. Mathematical | Under exact arithmetic, speculative sampling emits tokens from the target distribution | The proof below |
 | 2. Executable finite-model | This implementation reproduces that distribution on small enumerable cases | `tests/unit/test_oracle.py`, exhaustive enumeration against an independent rational oracle |
-| 3. Real-model numerical conformance | The cached engine returns the same greedy token IDs as the Hugging Face baseline on the pinned Qwen3 pair | Established for target-only decoding in M3, `tests/integration/test_cached_engine_gpu.py`. Speculation is M4 |
+| 3. Real-model numerical conformance | Speculative and target-only decoding return the same greedy token IDs | **Holds at 32 tokens, 100% of 16 comparisons. Fails at 64+ tokens, 75% agreement.** Every divergence is a near-tie; see section 4b |
 | 4. Empirical performance | Speculation is faster on a named workload and hardware | Not measured. Milestone 7 |
 
 The levels do not substitute for each other. Level 2 passing says nothing about
@@ -210,6 +210,52 @@ The fix was to make the baseline do what the specification says by also setting
 `suppress_tokens`. The lesson is recorded here because "the engines disagree"
 almost never identifies its own cause.
 
+## 4b. Greedy conformance is a rate, and it is not 100%
+
+Greedy speculation is exact in real arithmetic. Section 2 proves it: verifying a
+proposal against the target's argmax either accepts the target's own choice or
+replaces it with the target's own choice. Milestones 3 and 4 confirmed it on the
+real model, with identical 32-token ID arrays across `native_ar`, `hf_ar` and
+`fixed_{1,2,4,8}`.
+
+At longer outputs it stops holding. Measured on the four pilot prompts at draft
+lengths 1, 2, 4 and 8 (`artifacts/conformance.json`):
+
+| Output length | Comparisons | Identical | Agreement |
+|---:|---:|---:|---:|
+| 32 | 16 | 16 | 100% |
+| 64 | 16 | 12 | 75% |
+| 128 | 16 | 12 | 75% |
+| 256 | 16 | 12 | 75% |
+
+The reason is section 4a's. A target-only step computes its logits in a width-1
+forward; a verification step computes the same logits inside a width-`g+1`
+forward. Both are correct; neither is bitwise equal to the other in BF16.
+
+What keeps this a floating-point result rather than a bug report is *where* the
+divergences land. Recomputing the uncached logits at each divergence, with the
+same EOS mask the engines used:
+
+| Case | Target-only chose | Speculation chose | Logit gap | Logit scale |
+|---|---|---|---:|---:|
+| prompt 1, token 54 | 13136 @ 39.250 | 3070 @ 39.000 | 0.250 | 39.2 |
+| prompt 0, token 56 | 73594 @ 18.125 | 151668 @ 18.250 | 0.125 | 18.2 |
+
+The largest gap between two chosen tokens across every observed divergence is
+**0.25**, against BF16 reduction-order noise measured at up to **1.13**. Both
+engines are choosing between tokens the model considers equally good; once they
+choose differently, the continuations diverge and never rejoin.
+
+A divergence at a confident position would be a different thing entirely, and
+the measurement reports the gap precisely so the two cannot be confused. The
+first version of that measurement omitted the EOS mask and reported a 15.5-logit
+gap, which would have meant a real bug. A diagnostic that does not reproduce the
+engine's own configuration measures something else.
+
+See [ADR 0004](decisions/0004-bf16-greedy-conformance.md), including the
+unresolved consequence for milestone 7: the report renderer currently refuses
+any cell where greedy outputs differ.
+
 ## 5. How the oracle stays independent
 
 `src/switchback/oracle.py` does not import `switchback.sampling`, and
@@ -240,13 +286,15 @@ stand in for the enumeration.
 
 ## 6. Current status
 
-Levels 1 and 2 are done. Level 3 holds for target-only decoding as of milestone
-3; speculation is not yet implemented, so the level-3 claim does not extend to
-it. Level 4 is not measured, and the README says so.
+Levels 1 and 2 are done and are exact. Level 3 is **partial and measured**:
+greedy conformance is 100% at 32 tokens and 75% at 64 and beyond, with every
+divergence a documented near-tie (section 4b). Level 4 is not measured, and the
+README says so.
 
 ```
 python -m pytest tests/unit/test_oracle.py tests/unit/test_sampling.py -q
 python -m pytest tests/property -q
 python -m pytest tests/integration/test_cached_engine_cpu.py -q     # FP32
 python -m pytest tests/integration/test_cached_engine_gpu.py -q -m gpu  # BF16
+python -m switchback conformance --lengths 32 64 128 256                # the rate
 ```
