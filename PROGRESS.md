@@ -4,22 +4,24 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestone 1 is complete. The execution machine is the DGX Spark itself
+Milestones 1 and 2 are complete. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
 Hugging Face reference baselines produce identical greedy token IDs on a
 32-token smoke request.
 
-No Switchback decoding exists yet. The next milestone implements the sampling
-oracle and the rejection-correction mathematics, entirely on CPU.
+The sampling core and the independent exact oracle are implemented and
+exhaustively enumerated against each other. There is still no cached engine and
+no model-driven decoding: the sampler is model-free and is driven by row
+callbacks, so M3 has to supply those rows from a real KV cache.
 
 ## Milestones
 
 | Milestone | Status | Evidence |
 |---|---|---|
 | M1 Hardware and baseline | **Complete** | `artifacts/environment.json`, `artifacts/model_check.json`, `artifacts/pilot/pilot.json`, 11 GPU tests |
-| M2 Sampling oracle | Not started | None |
+| M2 Sampling oracle | **Complete** | `docs/correctness.md`, 38 oracle tests, 23 property tests |
 | M3 Cached target-only engine | Not started | None |
 | M4 Fixed greedy speculation | Not started | None |
 | M5 Sampled speculation and traces | Not started | None |
@@ -29,11 +31,12 @@ oracle and the rejection-correction mathematics, entirely on CPU.
 
 ## Next action
 
-Begin M2: implement `src/switchback/sampling.py` (FP32 probability transforms,
-proposal draw, acceptance test, residual and bonus draws) and
-`src/switchback/oracle.py` (independent FP64 exact enumeration over rational
-probabilities). No GPU is needed. Do not let the oracle import the production
-sampler.
+Begin M3: implement `src/switchback/cache.py` (the pending-token cache ledger)
+and the Qwen adapter's `forward`/`crop`/`cache_length`, then a native
+target-only greedy and sampling engine in `src/switchback/decoder.py`. Add
+cache/no-cache differential tests before any speculation. Validate in FP32 on
+CPU with the tiny fixture first, then BF16 on the GPU; do not widen tolerances
+to make a failing output comparison pass.
 
 ---
 
@@ -145,6 +148,101 @@ sampler.
     `test_any_reordering_of_ids_is_detected` generates every permutation of a
     small vocabulary and asserts the verdict is compatible only for the
     identity.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+---
+
+### M2: Independent sampling oracle
+
+- **Status:** complete.
+
+- **Implementation and decisions:**
+  - `sampling.py`: FP32 probability transforms, greedy selection with explicit
+    smallest-ID tie breaking, positive residual, correction and bonus draws,
+    `speculative_block`, `greedy_block`, and the sequence-level drivers. Pure:
+    no clock, no device counter, no controller state, no model.
+  - Every stochastic decision goes through a `RandomSource` with exactly two
+    operations, `categorical(weights)` and `accept_ratio(numerator,
+    denominator)`. That is what makes exhaustive enumeration of the real
+    sampler exact instead of statistical.
+  - Acceptance compares `u * q <= p` rather than `u <= p/q`. Mathematically
+    identical, and it avoids forming a quotient that is generally not dyadic:
+    `(1/4)/(3/4) = 1/3` would round and put roughly 1e-8 into every enumerated
+    path.
+  - Categorical draws take unnormalized weights so the exact `max(p - q, 0)`
+    is not destroyed by an inexact division before sampling.
+  - Three RNG streams (proposal, acceptance, correction/bonus) derived from the
+    request seed by SHA-256, so consuming one cannot perturb another.
+  - `oracle.py` works only in `fractions.Fraction` and never imports
+    `switchback.sampling`; the implementation under test is passed in as a
+    callable.
+
+- **Commands actually run:**
+  ```
+  python -m pytest tests/unit/test_sampling.py tests/unit/test_oracle.py -q
+  python -m pytest tests/property -q
+  python -m pytest -m 'not gpu and not download' -q      (x8, fresh .hypothesis each time)
+  python -m ruff check . && python -m ruff format --check .
+  python -m mypy src/switchback
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 174 CPU tests pass (up from 89), including 34 sampling unit tests, 38 oracle
+    tests, and 23 property tests. ruff, format, and mypy clean.
+  - Exhaustive enumeration: every rational target/draft pair with denominator 4
+    over vocabularies of size 2, 3 and 4 (25, 225 and 1225 pairs). Accepted plus
+    residual mass equals the target **exactly** as rationals, which is stronger
+    than the specified 1e-12 FP64 gate.
+  - The production sampler itself, enumerated over all execution paths for
+    sizes 2 and 3, reproduces the target distribution exactly.
+  - 20 deterministically seeded tiny tree pairs (vocab 2-3, 3 output tokens,
+    gamma 1 and 2): exact total variation distance 0 from the target's
+    autoregressive law.
+  - Mutation check: an implementation that verifies every candidate against the
+    block's first target row is required to fail the tree test, so the passing
+    result is not vacuous.
+  - Failed and fixed during the milestone: three property strategies filtered on
+    equal vector length, which tripped Hypothesis' `filter_too_much` health
+    check on roughly half of fresh-database runs. Fixed by drawing the shared
+    length up front, not by suppressing the health check; verified stable over
+    eight runs with the example database deleted each time.
+  - Skipped: nothing.
+
+- **Benchmark or evidence paths:** none. M2 produces no timings by design.
+  `docs/correctness.md` records the proof and the scope of each claim.
+
+- **Source commit:** this milestone's commits, `feat: implement the numerical
+  sampling core` through `docs: prove the one-step identity`.
+
+- **Known limitations and blockers:**
+  - The sampler is model-free: it takes row callbacks, not a model or a cache.
+    Nothing yet connects it to real logits, so level 3 of `docs/correctness.md`
+    (real-model numerical conformance) is still unestablished.
+  - Enumeration is exact only because the test inputs are dyadic. Real FP32
+    softmax outputs are not, and no claim is made about vocabulary size 151,936.
+  - EOS handling exists as a masking policy only; request termination is the
+    decoder's job in M3.
+
+- **Next concrete step:** implement `cache.py` and the adapter forward/crop pair
+  for M3.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* express acceptance as a ratio and keep residual weights
+    unnormalized, instead of precomputing the acceptance probability and a
+    normalized residual.
+  - *Alternative considered:* the textbook form, `accept if u <= p[d]/q[d]` with
+    `r = max(p-q,0)/Z`. It reads closer to the paper.
+  - *Failure mode:* both `p/q` and `1/Z` are inexact in binary floating point
+    even when `p` and `q` are not. An exhaustive test would then compare the
+    sampler against the oracle with roughly 1e-8 of unavoidable noise, so the
+    only usable gate would be a tolerance -- and a tolerance wide enough to
+    absorb that noise is also wide enough to hide a genuine 1e-7 bias in the
+    residual.
+  - *Evidence:* `test_production_block_reproduces_the_target_for_every_rational_pair`
+    asserts exact rational equality, not `approx`, for all 250 pairs at
+    vocabulary sizes 2 and 3. It would not be possible to write that assertion
+    with the textbook form.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 
