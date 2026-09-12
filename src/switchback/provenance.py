@@ -105,6 +105,4 @@ def collect_source_provenance(root: Path | None = None) -> SourceProvenance:
     status = _git(base, "status", "--porcelain")
     dirty = None if status is None else bool(status.strip())
     digest, count = source_digest(base)
-    return SourceProvenance(
-        commit=commit, dirty=dirty, source_sha256=digest, file_count=count
-    )
+    return SourceProvenance(commit=commit, dirty=dirty, source_sha256=digest, file_count=count)

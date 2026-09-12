@@ -25,7 +25,6 @@ from switchback.models.qwen import (
     DRAFT_REPO,
     TARGET_REPO,
     check_logits_vocab_match,
-    check_tokenizer_compatibility,
     render_chat_prompt,
     resolve_revision,
 )

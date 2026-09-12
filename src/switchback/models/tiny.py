@@ -139,7 +139,8 @@ def build_tiny_model(
 
     config = tiny_config(hidden_size=hidden_size, layers=layers)
     torch.manual_seed(seed)
-    model = Qwen3ForCausalLM(config)
+    # ``Any``: see the note in models/qwen.py about ``PreTrainedModel.to``.
+    model: Any = Qwen3ForCausalLM(config)
     generator = torch.Generator(device="cpu").manual_seed(seed)
     with torch.no_grad():
         for name, parameter in sorted(model.named_parameters()):
@@ -172,9 +173,7 @@ def build_tiny_model(
     )
 
 
-def tiny_pair(
-    target_seed: int = 1234, draft_seed: int = 5678
-) -> tuple[TinyModel, TinyModel]:
+def tiny_pair(target_seed: int = 1234, draft_seed: int = 5678) -> tuple[TinyModel, TinyModel]:
     """A target/draft fixture pair that shares a vocabulary but not weights."""
     target = build_tiny_model(seed=target_seed, hidden_size=64, layers=2)
     draft = build_tiny_model(seed=draft_seed, hidden_size=32, layers=1)

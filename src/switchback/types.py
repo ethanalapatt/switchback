@@ -65,9 +65,7 @@ class DecodeConfig:
             raise ConfigError(f"unknown eos_policy {self.eos_policy!r}")
         if self.mode == "sample":
             if not (self.temperature > 0.0):
-                raise ConfigError(
-                    f"sample mode requires temperature > 0, got {self.temperature!r}"
-                )
+                raise ConfigError(f"sample mode requires temperature > 0, got {self.temperature!r}")
             if self.temperature != self.temperature or self.temperature == float("inf"):
                 raise ConfigError(f"temperature must be finite, got {self.temperature!r}")
         if self.max_new_tokens < 1:

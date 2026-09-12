@@ -90,6 +90,8 @@ def configure_torch_native_overrides(force_disable_triton: bool = False) -> Torc
             disabled_ops=(),
             reason="torch build registers no Triton aten overrides",
         )
+    usable: bool
+    reason: str | None
     if force_disable_triton:
         usable, reason = False, "disabled by explicit request"
     else:

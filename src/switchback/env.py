@@ -260,11 +260,14 @@ def collect_environment(require_gpu: bool = False) -> EnvironmentReport:
         ]
     provenance = collect_source_provenance()
     ok = all(check.status == "pass" for check in checks if check.required)
-    gpu_ready = all(
-        check.status == "pass"
-        for check in checks
-        if check.name in {"cuda_available", "bf16_supported", "device_memory"}
-    ) and torch_facts["cuda_available"]
+    gpu_ready = (
+        all(
+            check.status == "pass"
+            for check in checks
+            if check.name in {"cuda_available", "bf16_supported", "device_memory"}
+        )
+        and torch_facts["cuda_available"]
+    )
     return EnvironmentReport(
         generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         max_context_tokens=MAX_CONTEXT_TOKENS,

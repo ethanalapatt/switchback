@@ -36,8 +36,7 @@ PILOT_PROMPTS: tuple[str, ...] = (
     "A train travels 60 km in 45 minutes. What is its average speed in km/h?",
     "Write a Python function for this task. Return code only. "
     "Check whether a string is a palindrome, ignoring case and spaces.",
-    "Solve the problem and state the final answer. "
-    "If 3x + 7 = 25, what is x?",
+    "Solve the problem and state the final answer. If 3x + 7 = 25, what is x?",
 )
 
 
@@ -263,8 +262,7 @@ def summarize(requests: list[PilotRequest]) -> str:
         ttft_ms = statistics.median(request.ttft_ns / 1e6 for request in sample)
         tokens = sorted({request.output_tokens for request in sample})
         lines.append(
-            f"  {engine:<11} {len(sample):>3}   {latency_ms:>16.1f}  {ttft_ms:>14.1f}"
-            f"  {tokens}"
+            f"  {engine:<11} {len(sample):>3}   {latency_ms:>16.1f}  {ttft_ms:>14.1f}  {tokens}"
         )
     lines.append("")
     lines.append("  Pilot only: not a benchmark cohort and not a speedup measurement.")

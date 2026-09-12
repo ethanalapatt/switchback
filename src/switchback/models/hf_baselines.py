@@ -249,9 +249,7 @@ def run_hf_ar(
     device: str,
 ) -> BaselineResult:
     """``hf_ar``: stock target-only ``.generate()`` with KV caching enabled."""
-    return _run(
-        "hf_ar", target, prompt_ids, config, eos_token_ids, pad_token_id, device
-    )
+    return _run("hf_ar", target, prompt_ids, config, eos_token_ids, pad_token_id, device)
 
 
 def run_hf_dynamic(

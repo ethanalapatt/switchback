@@ -216,7 +216,9 @@ def load_qwen(
     tokenizer = AutoTokenizer.from_pretrained(
         repo_id, revision=revision, local_files_only=local_files_only
     )
-    model = AutoModelForCausalLM.from_pretrained(
+    # ``Any`` because Transformers' ``PreTrainedModel.to`` overloads do not
+    # describe the ``(device)`` form this project uses.
+    model: Any = AutoModelForCausalLM.from_pretrained(
         repo_id,
         revision=revision,
         dtype=_torch_dtype(dtype),
@@ -224,7 +226,7 @@ def load_qwen(
         local_files_only=local_files_only,
         device_map=None,
     )
-    model.to(device)
+    model = model.to(device)
     model.eval()
     model.requires_grad_(False)
     assert_resident(model, device)

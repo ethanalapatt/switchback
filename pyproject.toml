@@ -52,6 +52,9 @@ filterwarnings = ["ignore::DeprecationWarning"]
 line-length = 100
 src = ["src", "bench", "scripts", "tests"]
 target-version = "py311"
+# Ruff formats Python code blocks inside Markdown. SPEC.md, PROGRESS.md and the
+# decision records are prose deliverables, not source, so they stay untouched.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]

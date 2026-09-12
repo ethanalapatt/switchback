@@ -4,23 +4,31 @@
 Usage: python scripts/render_results.py RUN_DIRECTORY --out RESULTS.md
 Standard library only. See SPEC.md for the acquisition/provenance contract.
 """
+
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import random
 import re
 import statistics
 import tempfile
+from collections import defaultdict
+from pathlib import Path
 
 KEY_FIELDS = ("cohort", "dataset", "mode", "condition", "prompt_id", "seed", "repeat", "engine")
-COUNTERS = ("accepted", "proposed", "target_calls", "bypass_decisions",
-            "controller_decisions", "peak_allocated_bytes", "peak_reserved_bytes")
+COUNTERS = (
+    "accepted",
+    "proposed",
+    "target_calls",
+    "bypass_decisions",
+    "controller_decisions",
+    "peak_allocated_bytes",
+    "peak_reserved_bytes",
+)
 
 
 def require(condition, message):
@@ -97,28 +105,50 @@ def load_run(root, allow_fixture):
     require(kind == "measured" or allow_fixture, "Fixture input requires --allow-fixture")
     require(manifest.get("complete") is True, "Run is incomplete")
     require(manifest.get("git_dirty") is False, "Final run must have a clean source tree")
-    require(re.fullmatch(r"[0-9a-f]{40}", manifest.get("git_commit", "")) is not None,
-            "Missing immutable source commit")
+    require(
+        re.fullmatch(r"[0-9a-f]{40}", manifest.get("git_commit", "")) is not None,
+        "Missing immutable source commit",
+    )
     for name in ("hardware", "software", "model_revisions"):
         require(isinstance(manifest.get(name), dict) and bool(manifest[name]), f"Missing {name}")
-    for name in ("config_sha256", "workload_sha256", "calibration_sha256", "benchmark_source_sha256"):
-        require(re.fullmatch(r"[0-9a-f]{64}", manifest.get(name, "")) is not None,
-                f"Missing {name}")
+    for name in (
+        "config_sha256",
+        "workload_sha256",
+        "calibration_sha256",
+        "benchmark_source_sha256",
+    ):
+        require(
+            re.fullmatch(r"[0-9a-f]{64}", manifest.get(name, "")) is not None, f"Missing {name}"
+        )
     for filename in ("requests.jsonl", "evidence.json"):
-        require(manifest.get("files", {}).get(filename) == digest(root / filename),
-                f"Integrity mismatch for {filename}")
+        require(
+            manifest.get("files", {}).get(filename) == digest(root / filename),
+            f"Integrity mismatch for {filename}",
+        )
     evidence = json.loads((root / "evidence.json").read_text())
     for name in ("passed", "oracle_passed", "cache_passed", "numerical_passed"):
         require(evidence.get(name) is True, f"Validation did not pass: {name}")
     require(evidence.get("source_commit") == manifest["git_commit"], "Evidence/source mismatch")
-    require(isinstance(evidence.get("commands"), list) and evidence["commands"], "No validation commands")
-    require(isinstance(evidence.get("artifacts"), list) and evidence["artifacts"], "No validation artifact references")
-    rows = [json.loads(line) for line in (root / "requests.jsonl").read_text().splitlines() if line.strip()]
+    require(
+        isinstance(evidence.get("commands"), list) and evidence["commands"],
+        "No validation commands",
+    )
+    require(
+        isinstance(evidence.get("artifacts"), list) and evidence["artifacts"],
+        "No validation artifact references",
+    )
+    rows = [
+        json.loads(line)
+        for line in (root / "requests.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
     require(bool(rows), "No requests")
     expected = manifest.get("expected_keys")
     require(isinstance(expected, list) and bool(expected), "No expected coverage manifest")
-    require(all(isinstance(item, list) and len(item) == len(KEY_FIELDS) for item in expected),
-            "Malformed expected request key")
+    require(
+        all(isinstance(item, list) and len(item) == len(KEY_FIELDS) for item in expected),
+        "Malformed expected request key",
+    )
     expected = [tuple(item) for item in expected]
     require(len(set(expected)) == len(expected), "Duplicate expected request key")
     observed = []
@@ -126,7 +156,7 @@ def load_run(root, allow_fixture):
         current = key(row)
         observed.append(current)
         require(row.get("status") == "ok", f"Unsuccessful request {current}")
-        for name in KEY_FIELDS[:5] + ("engine",):
+        for name in (*KEY_FIELDS[:5], "engine"):
             require(isinstance(row[name], str) and bool(row[name]), f"Invalid {name}")
         require(is_int(row["seed"]) and is_int(row["repeat"]), "Invalid seed/repeat")
         require(row["mode"] in {"greedy", "sample"}, "Unknown decoding mode")
@@ -134,25 +164,36 @@ def load_run(root, allow_fixture):
         require(all(is_int(value) and value >= 0 for value in times), "Invalid timestamps")
         require(times[0] < times[1] <= times[2] <= times[3], "Incoherent timing boundaries")
         ids = row.get("output_ids")
-        require(isinstance(ids, list) and bool(ids) and all(is_int(i) and i >= 0 for i in ids),
-                "Missing or invalid committed token IDs")
+        require(
+            isinstance(ids, list) and bool(ids) and all(is_int(i) and i >= 0 for i in ids),
+            "Missing or invalid committed token IDs",
+        )
         if len(ids) == 1:
             require(times[1] == times[2], "Single-token release timestamps disagree")
         for name in COUNTERS:
             require(name in row, f"Missing counter {name}; use null if unavailable")
             require(row[name] is None or (is_int(row[name]) and row[name] >= 0), f"Invalid {name}")
         for part, total in (("accepted", "proposed"), ("bypass_decisions", "controller_decisions")):
-            require((row[part] is None) == (row[total] is None), f"Partial counter pair {part}/{total}")
+            require(
+                (row[part] is None) == (row[total] is None), f"Partial counter pair {part}/{total}"
+            )
             if row[part] is not None:
                 require(row[part] <= row[total], f"Impossible counter pair {part}/{total}")
         require(row["target_calls"] is None or row["target_calls"] > 0, "No target call")
         if row["peak_allocated_bytes"] is not None and row["peak_reserved_bytes"] is not None:
-            require(row["peak_allocated_bytes"] <= row["peak_reserved_bytes"], "Allocated memory exceeds reserved")
+            require(
+                row["peak_allocated_bytes"] <= row["peak_reserved_bytes"],
+                "Allocated memory exceeds reserved",
+            )
     require(len(observed) == len(set(observed)), "Duplicate completed request key")
-    require(set(observed) == set(expected), "Missing or unexpected requests; report cannot drop rows")
+    require(
+        set(observed) == set(expected), "Missing or unexpected requests; report cannot drop rows"
+    )
     engines = manifest.get("required_engines")
-    require(isinstance(engines, list) and len(engines) >= 2 and len(engines) == len(set(engines)),
-            "Invalid required_engines")
+    require(
+        isinstance(engines, list) and len(engines) >= 2 and len(engines) == len(set(engines)),
+        "Invalid required_engines",
+    )
     baseline = manifest.get("baseline")
     require(baseline in engines, "Baseline must be a required engine")
     require({row["engine"] for row in rows} == set(engines), "Required engine coverage mismatch")
@@ -164,8 +205,11 @@ def load_run(root, allow_fixture):
         if cell[2] == "greedy":
             reference = members[baseline]["output_ids"]
             for engine, row in members.items():
-                require(row["output_ids"] == reference,
-                        f"Greedy output mismatch: {cell}, {engine}; investigate before publishing speedup")
+                require(
+                    row["output_ids"] == reference,
+                    f"Greedy output mismatch: {cell}, {engine}; "
+                    f"investigate before publishing speedup",
+                )
     return manifest, evidence, rows
 
 
@@ -174,77 +218,165 @@ def render(manifest, evidence, rows):
     lines = ["# Switchback results", ""]
     if fixture:
         lines += ["**SYNTHETIC TEST FIXTURE. NOT BENCHMARK EVIDENCE.**", ""]
-    lines += ["Generated from raw request measurements. Do not edit numerical values by hand.", "",
-              f"Source commit: `{manifest['git_commit']}`. Baseline: `{safe(manifest['baseline'])}`.", "",
-              "```json", json.dumps({name: manifest[name] for name in
-                    ("hardware", "software", "model_revisions", "config_sha256", "workload_sha256",
-                     "calibration_sha256", "benchmark_source_sha256", "files")}, indent=2, sort_keys=True),
-              "```", "", f"Complete logical requests: {len(rows)}. Required engines: {len(manifest['required_engines'])}.", "",
-              "Greedy token equality was checked for every paired request. Sampled outputs were not required to match.", "",
-              "Oracle, cache, and numerical gates: passed according to the linked validation evidence. "
-              "Finite-model tests do not prove universal GPU equivalence.", "",
-              "Validation commands: " + "; ".join(safe(x) for x in evidence["commands"]) + ".", "",
-              "Evidence references: " + "; ".join(safe(x) for x in evidence["artifacts"]) + ".", ""]
+    lines += [
+        "Generated from raw request measurements. Do not edit numerical values by hand.",
+        "",
+        f"Source commit: `{manifest['git_commit']}`. Baseline: `{safe(manifest['baseline'])}`.",
+        "",
+        "```json",
+        json.dumps(
+            {
+                name: manifest[name]
+                for name in (
+                    "hardware",
+                    "software",
+                    "model_revisions",
+                    "config_sha256",
+                    "workload_sha256",
+                    "calibration_sha256",
+                    "benchmark_source_sha256",
+                    "files",
+                )
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        "```",
+        "",
+        f"Complete logical requests: {len(rows)}. "
+        f"Required engines: {len(manifest['required_engines'])}.",
+        "",
+        "Greedy token equality was checked for every paired request. "
+        "Sampled outputs were not required to match.",
+        "",
+        "Oracle, cache, and numerical gates: passed according to the linked validation evidence. "
+        "Finite-model tests do not prove universal GPU equivalence.",
+        "",
+        "Validation commands: " + "; ".join(safe(x) for x in evidence["commands"]) + ".",
+        "",
+        "Evidence references: " + "; ".join(safe(x) for x in evidence["artifacts"]) + ".",
+        "",
+    ]
     grouped = defaultdict(list)
     pooled = defaultdict(list)
     for row in rows:
         grouped[(row["cohort"], row["dataset"], row["mode"], row["condition"])].append(row)
         # Real cohorts and controlled stress cohorts must have distinct cohort names.
-        pooled[(row["cohort"], "ALL DATASETS IN THIS COHORT", row["mode"], row["condition"])].append(row)
+        pooled[
+            (row["cohort"], "ALL DATASETS IN THIS COHORT", row["mode"], row["condition"])
+        ].append(row)
     groups = {**grouped, **pooled}
     for group, population in sorted(groups.items()):
         by_engine = defaultdict(list)
         for row in population:
             by_engine[row["engine"]].append(row)
         reference = by_engine[manifest["baseline"]]
-        lines += ["## " + " / ".join(safe(x) for x in group), "",
-                  "| Engine | Requests | Prompts | p50 ms | p95 ms | TTFT p50 ms | TPOT p50 ms | Tokens/s | Speedup | 95% CI | Slowdown >5% |",
-                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|"]
+        lines += [
+            "## " + " / ".join(safe(x) for x in group),
+            "",
+            "| Engine | Requests | Prompts | p50 ms | p95 ms | TTFT p50 ms | "
+            "TPOT p50 ms | Tokens/s | Speedup | 95% CI | Slowdown >5% |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|",
+        ]
         for engine in manifest["required_engines"]:
             sample = by_engine[engine]
             durations = [latency(row) for row in sample]
             ttft = [(row["first_token_ns"] - row["start_ns"]) / 1e6 for row in sample]
-            tpot = [(row["last_token_ns"] - row["first_token_ns"]) / 1e6 / (len(row["output_ids"]) - 1)
-                    for row in sample if len(row["output_ids"]) > 1]
+            tpot = [
+                (row["last_token_ns"] - row["first_token_ns"]) / 1e6 / (len(row["output_ids"]) - 1)
+                for row in sample
+                if len(row["output_ids"]) > 1
+            ]
             speed, lo, hi, slowdown = paired_speedup(reference, sample)
-            values = [safe(engine), str(len(sample)), str(len(prompt_latencies(sample))),
-                      fmt(statistics.median(durations) * 1000), fmt(quantile(durations, .95) * 1000),
-                      fmt(statistics.median(ttft)), fmt(statistics.median(tpot) if tpot else None),
-                      fmt(sum(len(row["output_ids"]) for row in sample) / sum(durations)),
-                      fmt(speed) + "x", f"[{lo:.3f}, {hi:.3f}]", f"{100 * slowdown:.1f}%"]
+            values = [
+                safe(engine),
+                str(len(sample)),
+                str(len(prompt_latencies(sample))),
+                fmt(statistics.median(durations) * 1000),
+                fmt(quantile(durations, 0.95) * 1000),
+                fmt(statistics.median(ttft)),
+                fmt(statistics.median(tpot) if tpot else None),
+                fmt(sum(len(row["output_ids"]) for row in sample) / sum(durations)),
+                fmt(speed) + "x",
+                f"[{lo:.3f}, {hi:.3f}]",
+                f"{100 * slowdown:.1f}%",
+            ]
             lines.append("| " + " | ".join(values) + " |")
-        lines += ["", "| Engine | Accepted/proposed | Output tokens/target call | Bypass decisions | Requests with bypass | Peak allocated MiB | Peak reserved MiB |",
-                  "|---|---:|---:|---:|---:|---:|---:|"]
+        lines += [
+            "",
+            "| Engine | Accepted/proposed | Output tokens/target call | Bypass decisions | "
+            "Requests with bypass | Peak allocated MiB | Peak reserved MiB |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
         for engine in manifest["required_engines"]:
             sample = by_engine[engine]
             accepted = ratio(summed(sample, "accepted"), summed(sample, "proposed"))
-            calls = ratio(sum(len(row["output_ids"]) for row in sample), summed(sample, "target_calls"))
-            bypass = ratio(summed(sample, "bypass_decisions"), summed(sample, "controller_decisions"))
-            request_bypass = None if any(r["bypass_decisions"] is None for r in sample) else sum(
-                r["bypass_decisions"] > 0 for r in sample) / len(sample)
+            calls = ratio(
+                sum(len(row["output_ids"]) for row in sample), summed(sample, "target_calls")
+            )
+            bypass = ratio(
+                summed(sample, "bypass_decisions"), summed(sample, "controller_decisions")
+            )
+            request_bypass = (
+                None
+                if any(r["bypass_decisions"] is None for r in sample)
+                else sum(r["bypass_decisions"] > 0 for r in sample) / len(sample)
+            )
             peaks = []
             for field in ("peak_allocated_bytes", "peak_reserved_bytes"):
                 values = [row[field] for row in sample]
-                peaks.append(None if any(value is None for value in values) else max(values) / 2**20)
-            lines.append("| " + " | ".join([safe(engine), fmt(accepted), fmt(calls), fmt(bypass),
-                                               fmt(request_bypass), fmt(peaks[0]), fmt(peaks[1])]) + " |")
-        lines += ["", "Speedups use per-prompt median latency, then a geometric mean. "
-                  "Intervals resample prompt identities 2,000 times; repeats remain inside each prompt. "
-                  "p95 is descriptive, especially for small strata. N/A means unavailable or undefined.", ""]
+                peaks.append(
+                    None if any(value is None for value in values) else max(values) / 2**20
+                )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        safe(engine),
+                        fmt(accepted),
+                        fmt(calls),
+                        fmt(bypass),
+                        fmt(request_bypass),
+                        fmt(peaks[0]),
+                        fmt(peaks[1]),
+                    ]
+                )
+                + " |"
+            )
+        lines += [
+            "",
+            "Speedups use per-prompt median latency, then a geometric mean. "
+            "Intervals resample prompt identities 2,000 times; repeats remain inside each prompt. "
+            "p95 is descriptive, especially for small strata. N/A means unavailable or undefined.",
+            "",
+        ]
         if group[2] == "sample":
-            lines += ["Sampled completions can have different lengths. End-to-end speedup alone is not a pure decode-rate comparison.", ""]
+            lines += [
+                "Sampled completions can have different lengths. End-to-end speedup "
+                "alone is not a pure decode-rate comparison.",
+                "",
+            ]
         if "adaptive" in by_engine:
             _, low, high, _ = paired_speedup(reference, by_engine["adaptive"])
-            conclusion = ("Adaptive latency improvement is supported by this interval." if low > 1 else
-                          "Adaptive latency is worse than baseline across this interval." if high < 1 else
-                          "Adaptive latency improvement is inconclusive at this interval.")
+            conclusion = (
+                "Adaptive latency improvement is supported by this interval."
+                if low > 1
+                else "Adaptive latency is worse than baseline across this interval."
+                if high < 1
+                else "Adaptive latency improvement is inconclusive at this interval."
+            )
             lines += [conclusion, ""]
-    lines += ["## Limits", "",
-              "These are sequential, batch-one warm-request results on the recorded configuration. "
-              "They do not establish multi-user serving throughput, capability accuracy, or performance on other GPUs. "
-              "Fixed-length conditions suppress EOS and must be read separately from natural stopping. "
-              "Hashes check file integrity; they cannot prove honest acquisition. "
-              "Consult SPEC.md and the acquisition code for measurement boundaries.", ""]
+    lines += [
+        "## Limits",
+        "",
+        "These are sequential, batch-one warm-request results on the recorded configuration. "
+        "They do not establish multi-user serving throughput, capability accuracy, "
+        "or performance on other GPUs. "
+        "Fixed-length conditions suppress EOS and must be read separately from natural stopping. "
+        "Hashes check file integrity; they cannot prove honest acquisition. "
+        "Consult SPEC.md and the acquisition code for measurement boundaries.",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -257,17 +389,23 @@ def main():
     root = args.run_directory.resolve()
     output = args.out.resolve()
     try:
-        require(output not in {root / name for name in ("manifest.json", "requests.jsonl", "evidence.json")},
-                "Output cannot overwrite raw evidence")
+        require(
+            output
+            not in {root / name for name in ("manifest.json", "requests.jsonl", "evidence.json")},
+            "Output cannot overwrite raw evidence",
+        )
         manifest, evidence, rows = load_run(root, args.allow_fixture)
-        require(not (manifest["data_kind"] == "fixture" and output.name.lower() == "results.md"),
-                "Fixture reports must never be named RESULTS.md")
+        require(
+            not (manifest["data_kind"] == "fixture" and output.name.lower() == "results.md"),
+            "Fixture reports must never be named RESULTS.md",
+        )
         report = render(manifest, evidence, rows)
         output.parent.mkdir(parents=True, exist_ok=True)
         temporary = None
         try:
-            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent,
-                                             prefix=".report-", delete=False) as stream:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=output.parent, prefix=".report-", delete=False
+            ) as stream:
                 temporary = Path(stream.name)
                 stream.write(report)
             os.replace(temporary, output)
