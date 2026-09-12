@@ -9,7 +9,7 @@ __pycache__/
 .ruff_cache/
 
 # Model weights and downloaded assets
-models/
+/models/
 hf_cache/
 *.safetensors
 *.gguf
