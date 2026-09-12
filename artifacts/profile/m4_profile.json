@@ -1,0 +1,304 @@
+{
+  "attn_implementation": "sdpa",
+  "blocks": [
+    {
+      "acceptance_rate": 0.8125,
+      "accepted": 13,
+      "blocks_measured": 16,
+      "catchup_blocks": 13,
+      "committed_tokens": 34,
+      "gamma": 1,
+      "prompt_tokens": 28,
+      "proposed": 16,
+      "stages": {
+        "commit_and_crop": {
+          "count": 16,
+          "max_ns": 571929,
+          "mean_ns": 318799.9375,
+          "median_ns": 300788.5,
+          "min_ns": 260076
+        },
+        "draft_catchup": {
+          "count": 16,
+          "max_ns": 14737075,
+          "mean_ns": 9971678.25,
+          "median_ns": 11563636.0,
+          "min_ns": 144
+        },
+        "draft_proposals": {
+          "count": 16,
+          "max_ns": 13324069,
+          "mean_ns": 11924490.125,
+          "median_ns": 11691834.0,
+          "min_ns": 11558060
+        },
+        "target_verification": {
+          "count": 16,
+          "max_ns": 48565010,
+          "mean_ns": 45261746.0625,
+          "median_ns": 44873569.0,
+          "min_ns": 43652497
+        },
+        "whole_block": {
+          "count": 16,
+          "max_ns": 73280133,
+          "mean_ns": 67476714.375,
+          "median_ns": 69526813.0,
+          "min_ns": 55778085
+        }
+      },
+      "warmup_blocks": 2
+    },
+    {
+      "acceptance_rate": 0.78125,
+      "accepted": 25,
+      "blocks_measured": 16,
+      "catchup_blocks": 11,
+      "committed_tokens": 48,
+      "gamma": 2,
+      "prompt_tokens": 28,
+      "proposed": 32,
+      "stages": {
+        "commit_and_crop": {
+          "count": 16,
+          "max_ns": 1897512,
+          "mean_ns": 610062.25,
+          "median_ns": 416411.0,
+          "min_ns": 341131
+        },
+        "draft_catchup": {
+          "count": 16,
+          "max_ns": 14294345,
+          "mean_ns": 8237544.5,
+          "median_ns": 11565036.0,
+          "min_ns": 144
+        },
+        "draft_proposals": {
+          "count": 16,
+          "max_ns": 26688219,
+          "mean_ns": 23952163.125,
+          "median_ns": 23437587.5,
+          "min_ns": 23273381
+        },
+        "target_verification": {
+          "count": 16,
+          "max_ns": 50647159,
+          "mean_ns": 46354331.3125,
+          "median_ns": 46172464.5,
+          "min_ns": 44108587
+        },
+        "whole_block": {
+          "count": 16,
+          "max_ns": 86180576,
+          "mean_ns": 79154101.1875,
+          "median_ns": 81554459.5,
+          "min_ns": 69501958
+        }
+      },
+      "warmup_blocks": 2
+    },
+    {
+      "acceptance_rate": 0.78125,
+      "accepted": 50,
+      "blocks_measured": 16,
+      "catchup_blocks": 12,
+      "committed_tokens": 77,
+      "gamma": 4,
+      "prompt_tokens": 28,
+      "proposed": 64,
+      "stages": {
+        "commit_and_crop": {
+          "count": 16,
+          "max_ns": 2186052,
+          "mean_ns": 819203.4375,
+          "median_ns": 641336.0,
+          "min_ns": 320924
+        },
+        "draft_catchup": {
+          "count": 16,
+          "max_ns": 11736490,
+          "mean_ns": 8726953.3125,
+          "median_ns": 11608283.5,
+          "min_ns": 144
+        },
+        "draft_proposals": {
+          "count": 16,
+          "max_ns": 52337426,
+          "mean_ns": 49180555.375,
+          "median_ns": 49472790.5,
+          "min_ns": 46486892
+        },
+        "target_verification": {
+          "count": 16,
+          "max_ns": 47890859,
+          "mean_ns": 45839231.3125,
+          "median_ns": 45754486.0,
+          "min_ns": 44245322
+        },
+        "whole_block": {
+          "count": 16,
+          "max_ns": 112547887,
+          "mean_ns": 104565943.4375,
+          "median_ns": 106638995.0,
+          "min_ns": 94460150
+        }
+      },
+      "warmup_blocks": 2
+    },
+    {
+      "acceptance_rate": 0.7421875,
+      "accepted": 95,
+      "blocks_measured": 16,
+      "catchup_blocks": 11,
+      "committed_tokens": 123,
+      "gamma": 8,
+      "prompt_tokens": 28,
+      "proposed": 128,
+      "stages": {
+        "commit_and_crop": {
+          "count": 16,
+          "max_ns": 1376414,
+          "mean_ns": 968612.4375,
+          "median_ns": 1087866.0,
+          "min_ns": 316940
+        },
+        "draft_catchup": {
+          "count": 16,
+          "max_ns": 14611221,
+          "mean_ns": 8349184.25,
+          "median_ns": 11646179.0,
+          "min_ns": 144
+        },
+        "draft_proposals": {
+          "count": 16,
+          "max_ns": 101437455,
+          "mean_ns": 97548470.25,
+          "median_ns": 97689086.0,
+          "min_ns": 93501459
+        },
+        "target_verification": {
+          "count": 16,
+          "max_ns": 50112223,
+          "mean_ns": 46496256.25,
+          "median_ns": 46662371.0,
+          "min_ns": 44567174
+        },
+        "whole_block": {
+          "count": 16,
+          "max_ns": 161853658,
+          "mean_ns": 153362523.1875,
+          "median_ns": 155317373.0,
+          "min_ns": 141452446
+        }
+      },
+      "warmup_blocks": 2
+    }
+  ],
+  "data_kind": "measured",
+  "device": "cuda",
+  "disclaimer": "Diagnostic per-stage timings with a synchronization between every stage. The added synchronizations inflate the total, so these numbers are for attribution and cost modelling only and are never mixed into a headline latency result.",
+  "draft_forward_by_width": {
+    "1": {
+      "count": 24,
+      "max_ns": 14246953,
+      "median_ns": 11439717.0,
+      "min_ns": 11359023
+    },
+    "2": {
+      "count": 24,
+      "max_ns": 16605019,
+      "median_ns": 13326421.0,
+      "min_ns": 13250038
+    },
+    "3": {
+      "count": 24,
+      "max_ns": 16074258,
+      "median_ns": 13313621.0,
+      "min_ns": 13242630
+    },
+    "5": {
+      "count": 24,
+      "max_ns": 16318030,
+      "median_ns": 13319437.5,
+      "min_ns": 13228055
+    },
+    "9": {
+      "count": 24,
+      "max_ns": 16333023,
+      "median_ns": 13462555.0,
+      "min_ns": 13374421
+    }
+  },
+  "dtype": "bfloat16",
+  "forward_by_width": {
+    "1": {
+      "count": 24,
+      "max_ns": 55861410,
+      "median_ns": 53036358.5,
+      "min_ns": 47686891
+    },
+    "17": {
+      "count": 24,
+      "max_ns": 55970546,
+      "median_ns": 51423612.0,
+      "min_ns": 48973836
+    },
+    "2": {
+      "count": 24,
+      "max_ns": 48607391,
+      "median_ns": 44735704.5,
+      "min_ns": 43392082
+    },
+    "3": {
+      "count": 24,
+      "max_ns": 50028189,
+      "median_ns": 45718228.5,
+      "min_ns": 43415506
+    },
+    "5": {
+      "count": 24,
+      "max_ns": 48505841,
+      "median_ns": 45707661.5,
+      "min_ns": 43650287
+    },
+    "9": {
+      "count": 24,
+      "max_ns": 104417732,
+      "median_ns": 45934514.5,
+      "min_ns": 43917452
+    }
+  },
+  "generated_at": "2026-09-12T09:36:46+00:00",
+  "is_benchmark_result": false,
+  "kind": "profile",
+  "models": {
+    "draft": "Qwen/Qwen3-0.6B",
+    "target": "Qwen/Qwen3-4B"
+  },
+  "prompt_tokens": 28,
+  "runtime": {
+    "deterministic_knobs": {
+      "allow_tf32_cudnn": false,
+      "allow_tf32_matmul": false,
+      "cublas_workspace_config": ":4096:8",
+      "cudnn_benchmark": false,
+      "float32_matmul_precision": "highest"
+    },
+    "native_overrides": {
+      "disabled_dsl": [
+        "triton"
+      ],
+      "disabled_ops": [
+        "bmm"
+      ],
+      "probed": true,
+      "reason": "CPython development headers absent (/usr/include/python3.12/Python.h); install python3-dev to restore the stock Triton routing",
+      "triton_overrides_available": false
+    }
+  },
+  "source": {
+    "commit": "d7784234247d4fce53a8755ce2f3a41fbcf35e32",
+    "dirty": true,
+    "source_sha256": "8bf4e17fcc68cf4d2405beb265707f85d8f70c49d552368984045a923bd08ff3"
+  }
+}
