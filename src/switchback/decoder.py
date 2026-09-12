@@ -15,6 +15,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from switchback.cache import CacheHandle, rollback_length
+from switchback.controller import (
+    Controller,
+    ControllerState,
+    CostController,
+    FixedController,
+)
 from switchback.events import BlockEvent, Clock, EventSink, MonotonicClock, NullSink
 from switchback.models.qwen import QwenAdapter
 from switchback.sampling import (
@@ -32,6 +38,7 @@ from switchback.sampling import (
 )
 from switchback.types import (
     MAX_CONTEXT_TOKENS,
+    BlockObservation,
     ConfigError,
     DecodeConfig,
     DecodeResult,
@@ -230,6 +237,7 @@ def _emit(
     draft_cache: CacheHandle | None,
     duration_ns: int,
     terminal: bool = False,
+    bypass_reason: str | None = None,
 ) -> None:
     sink.emit(
         BlockEvent(
@@ -245,7 +253,7 @@ def _emit(
             draft_calls=state.draft_calls,
             target_cache_after=cache.length,
             draft_cache_after=None if draft_cache is None else draft_cache.length,
-            bypass_reason=None,
+            bypass_reason=bypass_reason,
             duration_ns=duration_ns,
             terminal=terminal,
         )
@@ -288,15 +296,16 @@ class DraftState:
     adapter: QwenAdapter
     cache: CacheHandle
     initialized: bool = False
+    retired: bool = False
 
 
-def decode_speculative_greedy(
+def decode_greedy_with_controller(
     target: QwenAdapter,
     draft: QwenAdapter,
     prompt_ids: Sequence[int],
     config: DecodeConfig,
     eos_token_ids: Sequence[int],
-    gamma: int,
+    controller: Controller,
     request_id: str = "request",
     run_id: str = "run",
     sink: EventSink | None = None,
@@ -319,14 +328,17 @@ def decode_speculative_greedy(
        is already right; the draft is one behind and needs a catch-up call whose
        cost is counted, not hidden.
 
-    Greedy mode only. The sampled path arrives in milestone 5.
+    The draft length comes from ``controller``. ``FixedController(g)`` gives the
+    ``fixed_g`` baselines and ``CostController`` gives ``adaptive``; the block
+    machinery is identical either way, which is what makes the comparison
+    between them a comparison of policies rather than of implementations.
+
+    Greedy mode only. The sampled path is ``decode_speculative_sampled``.
     """
     import torch
 
-    if gamma < 1:
-        raise ConfigError(f"speculative decoding requires gamma >= 1, got {gamma}")
     if config.mode != "greedy":
-        raise ConfigError("decode_speculative_greedy only implements greedy mode")
+        raise ConfigError("this engine only implements greedy mode")
 
     options = options or EngineOptions()
     sink = sink if sink is not None else NullSink()
@@ -399,7 +411,58 @@ def decode_speculative_greedy(
                 )
                 continue
 
-            width = min(gamma, remaining - 1)
+            action = controller.choose(
+                ControllerState(
+                    cached_tokens=target.cache_length(target_cache),
+                    remaining_budget=remaining,
+                    draft_initialized=drafting.initialized,
+                    blocks_observed=state.blocks,
+                )
+            )
+            if action <= 0:
+                # Bypass. The draft cache is retired for the rest of the request
+                # (SPEC.md section 4.3): reactivating it would need a rebuild
+                # whose cost is not in the controller's model.
+                if drafting.initialized:
+                    draft.crop(drafting.cache, 0)
+                    drafting.cache.reset()
+                    drafting.initialized = False
+                drafting.retired = True
+                pending = torch.tensor([[sequence[-1]]], dtype=torch.long, device=device)
+                row = target.forward(pending, target_cache)
+                state.target_calls += 1
+                token = greedy_token(row[0, -1], forbidden_ids=forbidden)
+                released = clock.mark()
+                state.committed.append(token)
+                state.release_ns.append(released)
+                if token in stop_ids:
+                    termination = "eos"
+                _emit(
+                    sink,
+                    state,
+                    "target_only",
+                    0,
+                    target_cache,
+                    None,
+                    released - block_start,
+                    terminal=termination == "eos",
+                    bypass_reason=_bypass_reason(controller),
+                )
+                controller.observe(
+                    BlockObservation(
+                        block_id=state.blocks - 1,
+                        action=0,
+                        proposed=0,
+                        accepted=0,
+                        rejection_position=None,
+                        total_ns=released - block_start,
+                        committed=1,
+                        cache_length_after=target_cache.length,
+                    )
+                )
+                continue
+
+            width = min(action, remaining - 1)
             if not drafting.initialized:
                 # Charged to this request: SPEC.md section 4.3.
                 draft.forward(
@@ -487,6 +550,18 @@ def decode_speculative_greedy(
                 duration_ns=released - block_start,
                 terminal=termination == "eos",
             )
+            controller.observe(
+                BlockObservation(
+                    block_id=state.blocks - 1,
+                    action=width,
+                    proposed=len(proposals),
+                    accepted=outcome.accepted,
+                    rejection_position=outcome.rejection_position,
+                    total_ns=released - block_start,
+                    committed=len(committed),
+                    cache_length_after=target_cache.length,
+                )
+            )
 
     end_ns = clock.mark()
     if options.correctness_checks:
@@ -506,12 +581,12 @@ def decode_speculative_greedy(
         accepted=accepted_total,
         target_calls=state.target_calls,
         draft_calls=state.draft_calls,
-        controller_decisions=0,
-        bypass_decisions=0,
+        controller_decisions=_controller_decisions(controller),
+        bypass_decisions=_controller_bypasses(controller),
         counters={
             "prompt_tokens": len(prompt),
             "blocks": state.blocks,
-            "gamma": gamma,
+            "gamma": getattr(controller, "gamma", None),
             "target_cache_length": target_cache.length,
             "draft_cache_length": drafting.cache.length if drafting.initialized else None,
             "draft_initialized": int(drafting.initialized),
@@ -585,6 +660,22 @@ def _verify_greedy(rows: Any, proposals: Sequence[int], forbidden: Sequence[int]
         emitted=(*proposals, bonus),
         all_accepted=True,
     )
+
+
+def _controller_decisions(controller: Controller) -> int:
+    """How many policy-level decisions the controller was asked to make."""
+    return int(getattr(controller, "decisions", 0))
+
+
+def _controller_bypasses(controller: Controller) -> int:
+    """How many of those decisions chose bypass."""
+    return int(getattr(controller, "bypass_decisions", 0))
+
+
+def _bypass_reason(controller: Controller) -> str | None:
+    """The controller's own explanation, recorded in the trace."""
+    decision = getattr(controller, "last_decision", None)
+    return None if decision is None else str(decision.reason)
 
 
 def _first_stop_index(tokens: Sequence[int], stop_ids: set[int]) -> int | None:
@@ -907,4 +998,69 @@ def decode_speculative_sampled(
             "draft_initialized": int(drafting.initialized),
             "correctness_checks": int(options.correctness_checks),
         },
+    )
+
+
+def decode_speculative_greedy(
+    target: QwenAdapter,
+    draft: QwenAdapter,
+    prompt_ids: Sequence[int],
+    config: DecodeConfig,
+    eos_token_ids: Sequence[int],
+    gamma: int,
+    request_id: str = "request",
+    run_id: str = "run",
+    sink: EventSink | None = None,
+    clock: Clock | None = None,
+    options: EngineOptions | None = None,
+) -> DecodeResult:
+    """``fixed_g``: greedy speculation at a constant draft length."""
+    if gamma < 1:
+        raise ConfigError(f"speculative decoding requires gamma >= 1, got {gamma}")
+    return decode_greedy_with_controller(
+        target,
+        draft,
+        prompt_ids,
+        config,
+        eos_token_ids,
+        FixedController(gamma),
+        request_id=request_id,
+        run_id=run_id,
+        sink=sink,
+        clock=clock,
+        options=options,
+    )
+
+
+def decode_adaptive_greedy(
+    target: QwenAdapter,
+    draft: QwenAdapter,
+    prompt_ids: Sequence[int],
+    config: DecodeConfig,
+    eos_token_ids: Sequence[int],
+    controller: CostController,
+    request_id: str = "request",
+    run_id: str = "run",
+    sink: EventSink | None = None,
+    clock: Clock | None = None,
+    options: EngineOptions | None = None,
+) -> DecodeResult:
+    """``adaptive``: greedy speculation with the measured cost controller.
+
+    The controller is reset before the request so no adaptive state crosses a
+    request boundary (invariant I10).
+    """
+    controller.reset()
+    return decode_greedy_with_controller(
+        target,
+        draft,
+        prompt_ids,
+        config,
+        eos_token_ids,
+        controller,
+        request_id=request_id,
+        run_id=run_id,
+        sink=sink,
+        clock=clock,
+        options=options,
     )
