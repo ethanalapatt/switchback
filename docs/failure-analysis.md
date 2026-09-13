@@ -41,8 +41,8 @@ adaptive policy could beat a well-chosen fixed one, and it has not been run.
 
 ## 2. Bypass is unnecessary on this hardware, and now that is measured
 
-**Zero bypass decisions out of 10,704**, across both cohorts and 768 adaptive
-requests. The natural-stop cohort was run specifically to give bypass a chance —
+**Zero bypass decisions out of 29,769** — 19,065 in the primary cohort and
+10,704 in natural stop, across 768 adaptive requests. The natural-stop cohort was run specifically to give bypass a chance —
 completions there run as short as 17 tokens, and a request that ends after a
 dozen tokens should never recover the draft prefill.
 

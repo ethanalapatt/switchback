@@ -42,50 +42,6 @@ natural-stop cohort is reported separately in
 [`scripts/render_trace_gif.py`](scripts/render_trace_gif.py), which refuses to
 animate a trace that fails its replay check.*
 
-### Natural stopping: the same ordering, and one definitive negative
-
-The same 128 prompts with EOS respected, so completions end where the model
-wants (17 to 256 tokens, median 135, 20% reaching the cap), plus the no-bypass
-ablation — 3,456 requests:
-
-| Engine | Speedup vs `hf_ar` | 95% CI |
-|---|---:|---|
-| `fixed_8` | 1.935× | [1.868, 2.010] |
-| **`adaptive`** | **1.911×** | [1.850, 1.980] |
-| `adaptive_no_bypass` | 1.905× | [1.847, 1.972] |
-| `hf_dynamic` | **2.037×** | [1.964, 2.121] |
-
-Compared **pairwise**, which removes prompt-level variance and is the statistic
-that matters:
-
-| Comparison | Primary | Natural stop |
-|---|---|---|
-| `adaptive` vs `fixed_8` | 0.978× [0.969, 0.988] | 0.988× [0.979, 0.996] |
-| `adaptive` vs `hf_dynamic` | 0.905× [0.892, 0.918] | 0.939× [0.923, 0.955] |
-| `adaptive_no_bypass` vs `adaptive` | — | 0.996× [0.989, 1.005] |
-
-**Bypass never fires.** Zero bypass decisions out of **10,704**, across all 384
-adaptive requests, on completions as short as 17 tokens. This was the cohort
-designed to make bypass pay — a request that stops after a dozen tokens should
-never recover the draft prefill — and it did not, because on this hardware the
-draft prefill costs about **14 ms against a 50 ms target forward**. It is
-recovered almost immediately. On completions of 24 tokens or fewer, `hf_ar`
-takes 1,080 ms and `adaptive` takes 679 ms.
-
-So `adaptive_no_bypass` being indistinguishable from `adaptive` (0.996×, interval
-straddling 1) is not a null result from a broken ablation — it is two provably
-identical engines, and the 0.4% spread between them is a useful read on the
-measurement floor.
-
-The honest conclusion is that **the bypass action, one of the four things this
-project set out to contribute, is never the right call on this hardware and
-model pair.** It is implemented, tested against fake cost tables, and now
-measured as unnecessary. A slower draft, a faster target, or a model pair with
-lower agreement would change that; none of those is this machine.
-
-Speculation also **never lost a prompt** in either cohort: the slowdown fraction
-is 0.0% everywhere, including at the shortest completions.
-
 ### The controller did not win
 
 Switchback's cost controller is **2.02× faster than the Hugging Face
@@ -112,9 +68,50 @@ Two reasons, and only one of them is fixable:
   is compatible with that argument — the draft's confidence is available before
   verification — and not implementing it is the honest gap.
 
-The controller also **never bypassed** (`bypass_fraction` 0.000 across all 384
-adaptive requests). On a cohort this favourable to drafting, that is the correct
-decision, which also means the bypass path has no evidence from this run.
+The controller also **never bypassed** here — 0 of 19,065 decisions. On a cohort
+this favourable to drafting that is the right call, and the natural-stop cohort
+below tests whether it is ever the wrong one.
+
+### Natural stopping: the same ordering, and one definitive negative
+
+The same 128 prompts with EOS respected, so completions end where the model
+wants (17 to 256 tokens, median 135, 20% reaching the cap), plus the no-bypass
+ablation — 3,456 requests:
+
+| Engine | Speedup vs `hf_ar` | 95% CI |
+|---|---:|---|
+| `fixed_8` | 1.935× | [1.868, 2.010] |
+| **`adaptive`** | **1.911×** | [1.850, 1.980] |
+| `adaptive_no_bypass` | 1.905× | [1.847, 1.972] |
+| `hf_dynamic` | **2.037×** | [1.964, 2.121] |
+
+Compared **pairwise**, which removes prompt-level variance and is the statistic
+that matters:
+
+| Comparison | Primary | Natural stop |
+|---|---|---|
+| `adaptive` vs `fixed_8` | 0.978× [0.969, 0.988] | 0.988× [0.979, 0.996] |
+| `adaptive` vs `hf_dynamic` | 0.905× [0.892, 0.918] | 0.939× [0.923, 0.955] |
+| `adaptive_no_bypass` vs `adaptive` | — | 0.996× [0.989, 1.005] |
+
+**Bypass never fires.** Zero bypass decisions out of **10,704** here, and
+**29,769** across both cohorts, on completions as short as 17 tokens. This was the cohort
+designed to make bypass pay — a request that stops after a dozen tokens should
+never recover the draft prefill — and it did not, because on this hardware the
+draft prefill costs about **14 ms against a 50 ms target forward**. It is
+recovered almost immediately. On completions of 24 tokens or fewer, `hf_ar`
+takes 1,080 ms and `adaptive` takes 679 ms.
+
+So `adaptive_no_bypass` being indistinguishable from `adaptive` (0.996×, interval
+straddling 1) is not a null result from a broken ablation — it is two provably
+identical engines, and the 0.4% spread between them is a useful read on the
+measurement floor.
+
+The honest conclusion is that **the bypass action, one of the four things this
+project set out to contribute, is never the right call on this hardware and
+model pair.** It is implemented, tested against fake cost tables, and now
+measured as unnecessary. A slower draft, a faster target, or a model pair with
+lower agreement would change that; none of those is this machine.
 
 ### What is genuinely established
 
@@ -167,8 +164,9 @@ flowchart TD
 
 ## What is implemented today
 
-Milestones 1 to 7 of 8 are complete. Milestone 8 (the remaining cohorts and the
-reviewer demo polish) is not.
+All eight milestones are complete for the declared scope. Two cohorts named in
+the spec — sampled decoding and context stress — have not been run, and are
+marked as such below.
 
 | Area | State |
 |---|---|
@@ -188,8 +186,8 @@ reviewer demo polish) is not.
 | Sampled and context-stress cohorts | **Not run** |
 
 `.generate()` is used only inside `src/switchback/models/hf_baselines.py`, which
-exists to provide the named external baselines. Switchback's own decoding, when
-it lands, implements verification and cache rollback directly.
+exists to provide the named external baselines. Switchback's own decoding
+implements verification and transactional cache rollback directly.
 
 ## Models and hardware
 
@@ -245,12 +243,13 @@ python -m mypy src/switchback
 
 python -m bench.prepare --config configs/primary.toml    # lock the workload
 python -m bench.run --config configs/primary.toml --out artifacts/runs/primary
+python -m bench.adjudicate artifacts/runs/primary --config configs/primary.toml  # only if validate asks
 python -m bench.validate artifacts/runs/primary --config configs/primary.toml
 python scripts/render_results.py artifacts/runs/primary --out RESULTS.md
 
 bash scripts/reproduce.sh --preset cpu           # offline gate
 bash scripts/reproduce.sh --preset smoke         # GPU gate + smoke benchmark + report
-bash scripts/reproduce.sh --preset full          # the primary matrix, ~7.7 hours
+bash scripts/reproduce.sh --preset full          # the primary matrix, 7.6 hours measured
 ```
 
 `reproduce.sh` exits `0` when every requested stage passed and `1` on failure.
@@ -281,24 +280,38 @@ implemented twice — once in
 
 ## Why not always speculate?
 
-Because drafting is not free, and on this hardware the arithmetic is close.
-From the measured profile in `artifacts/profile/` and `artifacts/calibration.json`:
+This is the question the project is named for, and the measured answer is **on
+this hardware, you always should** — which is not the answer the design
+anticipated.
 
-- A target forward costs about **46–52 ms** whether it verifies 1 token or 9.
-  Verification width is nearly free, which is what makes speculation possible
-  at all. (A single-token forward is actually the *most* expensive of them, by
-  about 10%.)
-- A draft forward costs about **12.5 ms**. So a draft length of 4 spends ~50 ms
-  of draft time to save at most 3 target calls.
-- When every candidate is accepted, the draft is one token behind and needs a
-  **catch-up forward**, another 12.5 ms, on most blocks.
+The arithmetic looked close. From `artifacts/calibration.json`:
+
+- A target forward costs **46–52 ms** whether it verifies 1 token or 9.
+  Verification width is nearly free, and a single-token forward is actually the
+  *most* expensive of them by about 10%.
+- A draft forward costs **~12.5 ms**, so `g=8` spends ~100 ms of draft time.
+- Full acceptance leaves the draft one token behind and costs a **catch-up
+  forward**, another ~12.5 ms, on most blocks.
 
 So `g=8` costs roughly `8 × 12.5 + 47 + 12.5 ≈ 160 ms` and commits at most 9
-tokens. Target-only commits 1 token for ~52 ms. Speculation wins only while
-acceptance stays high enough that the expected token count justifies the draft
-time — and acceptance falls with position. That break-even is exactly what
-[`src/switchback/controller.py`](src/switchback/controller.py) estimates before
-each block, and why the action set includes `0`.
+tokens, against ~52 ms per token for target-only. The break-even sits at an
+acceptance rate the controller estimates before each block, and that is why the
+action set includes `0`.
+
+Measured acceptance never got near it. It runs **0.91 at candidate position 1
+down to 0.63 at position 8**, and the controller chose bypass **0 times out of
+10,704 decisions** across both cohorts — including on completions as short as 17
+tokens, where the draft prefill has the least time to pay for itself. The
+prefill costs ~14 ms against a ~50 ms target forward; it is recovered almost at
+once. The slowdown fraction is 0.0% everywhere.
+
+So the honest answer to the title question is: **because drafting could cost more
+than it saves, and on this machine it never did.** What would change that is a
+slower draft, a faster target, a model pair that agrees less, or a workload the
+draft is badly matched to. The break-even analysis in
+[`src/switchback/controller.py`](src/switchback/controller.py) is the part that
+would still be right on such a machine; the bypass action is the part this one
+never needed.
 
 ## Known limitations
 
@@ -306,14 +319,14 @@ A full post-mortem — why the controller lost, the three measurement bugs that
 produced plausible wrong numbers, and what a restart would do differently — is in
 **[docs/failure-analysis.md](docs/failure-analysis.md)**.
 
-- **No benchmark has run.** Milestones 6–8 are unimplemented: sampled
-  the cost controller, the locked cohort, and the report. The
-  profile in `artifacts/profile/` is a diagnostic pass on a single prompt with
-  a synchronization between every stage; it is not a latency result and no
-  speedup is derived from it.
-- **Bypass is measured as unnecessary, not as working.** 0 bypasses in 10,704
-  controller decisions across both cohorts. The logic is exercised only by fake
-  cost tables; on this hardware no real request ever made it the right call.
+- **The diagnostic profile is not a latency result.** `artifacts/profile/` is a
+  single-prompt pass with a synchronization between every stage, which inflates
+  its totals. It feeds the controller's cost model; no speedup is derived from
+  it. The measured results come from `artifacts/runs/`.
+- **Bypass is measured as unnecessary, not as working.** 0 bypasses in 29,769
+  controller decisions across both cohorts (19,065 primary, 10,704 natural
+  stop). The logic is exercised only by fake cost tables; on this hardware no
+  real request ever made it the right call.
 - **The sampled and context-stress cohorts have not run.** Context stress is
   the one that could still change the conclusion about the controller: prompts
   from 128 to 3,072 tokens are where the best draft length is most likely to
@@ -325,8 +338,8 @@ produced plausible wrong numbers, and what a restart would do differently — is
   in thirty disagree on argmax, always at near-ties (top-2 margin ≤ 0.125 on a
   logit scale near 50). Measured, documented in
   [docs/correctness.md](docs/correctness.md), and not worked around.
-- **One machine, one model pair, batch size one.** Results, when they exist, will
-  not transfer to other GPUs, other model families, or to batched serving.
+- **One machine, one model pair, batch size one.** Nothing here transfers to
+  other GPUs, other model families, other dtypes, or to batched serving.
 - **torch's Triton `aten::bmm` override is deregistered on this host** because
   the CPython development headers are absent, so Triton cannot build its CUDA
   shim. `sudo apt install python3-dev` restores stock routing; the doctor
@@ -334,8 +347,10 @@ produced plausible wrong numbers, and what a restart would do differently — is
   [ADR 0002](docs/decisions/0002-triton-bmm-override.md).
 - **CI is CPU only.** It cannot satisfy a GPU gate, and it asserts that
   `doctor --require-gpu` fails on a CPU runner rather than quietly passing.
-- **The pilot is not a benchmark.** `artifacts/pilot/pilot.json` sizes the
-  milestone 7 run. Four prompts, unrandomized engine order, no held-out cohort.
+- **The pilot and the controller check are not benchmarks.**
+  `artifacts/pilot/pilot.json` sized the primary run and
+  `artifacts/controller_check.json` is in-sample: few prompts, unrandomized or
+  calibration-derived, no held-out cohort. Both are labelled in their own files.
 
 ## Prior work
 

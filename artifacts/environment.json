@@ -78,10 +78,10 @@
     "cuda_version": null,
     "driver_version": "580.142",
     "gpu_name": "NVIDIA GB10",
-    "power_draw_w": 3.96,
-    "temperature_c": 40.0
+    "power_draw_w": 6.01,
+    "temperature_c": 46.0
   },
-  "generated_at": "2026-09-12T09:02:44+00:00",
+  "generated_at": "2026-09-13T00:48:26+00:00",
   "gpu_ready": true,
   "host": {
     "cpu_count": 20,
@@ -108,10 +108,10 @@
     "version": "3.12.3"
   },
   "source": {
-    "commit": "9286bfc146c691a037b0d5a7fb13ae2474f033be",
+    "commit": "e8e686fac2f4439e8bf7c4f38625076e4d372973",
     "dirty": false,
-    "source_file_count": 14,
-    "source_sha256": "5e2d98636e307a7941e9c15ea51dd23e394f3d2a1e878750acbb3d363e85ce06"
+    "source_file_count": 33,
+    "source_sha256": "877d3f0c856a3dd393c1b3366a15321061835a0531915b2051653b72a42c56c0"
   },
   "torch": {
     "bf16_supported": true,

@@ -985,7 +985,8 @@ bypass never fired.
 
 - **The natural-stop result:** the ordering is unchanged. Paired,
   `adaptive` is 0.988x [0.979, 0.996] of `fixed_8` and 0.939x [0.923, 0.955] of
-  `hf_dynamic`. **Bypass never fired: 0 of 10,704 controller decisions**, on
+  `hf_dynamic`. **Bypass never fired: 0 of 10,704 controller decisions here and 29,769 across
+  both cohorts**, on
   completions as short as 17 tokens, because the draft prefill costs about 14 ms
   against a 50 ms target forward and is recovered almost immediately. On
   completions of 24 tokens or fewer, `hf_ar` takes 1,080 ms and `adaptive` 679
