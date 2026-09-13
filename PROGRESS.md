@@ -4,7 +4,7 @@ Updated: September 12, 2026.
 
 ## Current state
 
-Milestones 1 through 7 are complete. The execution machine is the DGX Spark itself
+Milestones 1 through 8 are complete for the declared scope. Two cohorts remain unrun and are named as such. The execution machine is the DGX Spark itself
 (`gigi-spark`, NVIDIA GB10, aarch64, driver 580.142, CUDA 13.0, torch
 2.14.0+cu130), so the GPU gates in M1 actually ran rather than being deferred.
 The pinned Qwen3 pair loads fully resident, passes tokenizer parity, and both
@@ -35,24 +35,30 @@ position and an execution path in ADR 0006.
 | M5 Sampled speculation and traces | **Complete** | 11 GPU tests, exact oracle agreement, `artifacts/traces/`, `artifacts/evidence.json` |
 | M6 Cost controller | **Complete** | 65 controller/adaptive tests, `artifacts/calibration.json`, `artifacts/controller_check.json`, `artifacts/conformance.json` |
 | M7 Benchmark and report | **Complete** | `RESULTS.md`, `artifacts/runs/primary/` (3,072 requests, validated), 32 report tests |
-| M8 Reviewer demo | Not started | None |
+| M8 Reviewer demo | **Complete** | `docs/trace.gif`, `viewer/`, `docs/failure-analysis.md`, natural-stop cohort |
 
 ## Next action
 
-Begin M8. The remaining cohorts matter more than polish, and one of them could
-change the headline:
+The declared scope is complete and published. Two things are worth doing next,
+in this order:
 
-1. **Natural stop** (`configs/natural.toml`, EOS respected). The fixed-length
-   condition hides draft startup cost on short completions, which is where
-   speculation is most likely to lose. This is the cohort that would produce a
-   non-zero slowdown fraction if one exists.
-2. **The no-bypass ablation.** `adaptive` never bypassed in the primary run, so
-   `adaptive` and `adaptive_no_bypass` should be identical there; running the
-   ablation on natural-stop data is where bypass could earn its place.
-3. **Sampled cohort** at temperature 0.7, reported separately, with the explicit
-   note that lower total latency on variable-length completions is not a decode
+1. **The context-stress cohort** (128 to 3,072 token prompts). It is the last
+   condition under which the adaptive controller could beat a well-chosen fixed
+   length, because it is where the best draft length is most likely to vary by
+   prompt. If it does not win there either, the controller's verdict is settled
+   and the resume line should describe the break-even study rather than a
    speedup.
-4. Reviewer polish: a GIF from a real saved trace, and a final README pass.
+2. **Confidence-based early stopping inside a block**, which is what
+   `hf_dynamic` does and the single change most likely to close the 0.94x gap to
+   it. The draft's own confidence is available before verification, so it does
+   not condition on the future and does not threaten the argument in
+   `docs/correctness.md` section 3.
+
+Before Ethan leads a resume with this: the five interview questions in
+`PORTFOLIO_DECISION.md` are still not demonstrated, and question 3 -- why high
+acceptance can still produce a slowdown, and how the controller decides to
+bypass -- now has a measured answer he should be able to give, including why
+bypass never fired.
 
 ---
 
@@ -924,6 +930,94 @@ change the headline:
     `bench/adjudicate.py` plus ten tests in
     `tests/report/test_conformance_contract.py` pin the new contract, including
     that a `near_tie` verdict contradicting its own margin is refused.
+
+- **Ethan's teach-back status:** not yet demonstrated.
+
+
+---
+
+### M8: Reviewer demo and remaining cohorts
+
+- **Status:** complete for the declared scope. The sampled and context-stress
+  cohorts are configured but not run, and are named as unrun everywhere they
+  would otherwise be assumed.
+
+- **Implementation and decisions:**
+  - `viewer/` is static HTML, CSS and JavaScript: no server, no network, no
+    build step, no inference. It reimplements `replay_trace` rather than
+    trusting its input, and `tests/unit/test_viewer.py` drives the JavaScript
+    through node and requires both implementations to agree on the real traces
+    and on four kinds of deliberate damage.
+  - `scripts/render_trace_gif.py` animates a **real** saved trace and refuses
+    one that fails its replay check, so the GIF cannot drift from what the
+    engine did. Text labels carry the meaning; colour repeats it.
+  - `docs/failure-analysis.md` is the post-mortem.
+  - `configs/natural.toml` gained `adaptive_no_bypass`. The ablation belongs
+    there rather than in the primary cohort, where the controller never bypassed
+    and the two engines were provably identical.
+
+- **Commands actually run:**
+  ```
+  python scripts/render_trace_gif.py artifacts/traces/greedy_g4.jsonl --out docs/trace.gif
+  HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES="" python -m switchback demo
+  HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES="" python -m pytest -m 'not gpu and not download' -q
+  HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES="" python -m switchback replay artifacts/traces/greedy_g4.jsonl
+  python -m bench.prepare   --config configs/natural.toml
+  python -m bench.run       --config configs/natural.toml --out artifacts/runs/natural
+  python -m bench.adjudicate artifacts/runs/natural --config configs/natural.toml
+  python -m bench.validate   artifacts/runs/natural --config configs/natural.toml
+  python scripts/render_results.py artifacts/runs/natural --out artifacts/runs/natural/report.md
+  ```
+
+- **Passed / failed / skipped checks:**
+  - 570 CPU tests and 54 GPU tests pass; ruff, format and mypy clean.
+  - The fresh-CPU acceptance criterion holds: with `HF_HUB_OFFLINE=1` and no
+    visible GPU, the demo, the whole CPU suite and a trace replay all run with
+    no weights and no network.
+  - The natural-stop cohort completed 3,456 of 3,456 requests with 0 errors in
+    4.4 hours, one process.
+  - The renderer refused it for one over-bound divergence -- the same
+    `mbpp_heldout_169` index 46 position as the primary run -- and named the
+    command to fix it. 21 adjudicated `near_tie`, 0 unexplained.
+
+- **Benchmark or evidence paths:** `artifacts/runs/natural/` (manifest,
+  requests, evidence, adjudication, report), `docs/trace.gif`, `viewer/`.
+
+- **The natural-stop result:** the ordering is unchanged. Paired,
+  `adaptive` is 0.988x [0.979, 0.996] of `fixed_8` and 0.939x [0.923, 0.955] of
+  `hf_dynamic`. **Bypass never fired: 0 of 10,704 controller decisions**, on
+  completions as short as 17 tokens, because the draft prefill costs about 14 ms
+  against a 50 ms target forward and is recovered almost immediately. On
+  completions of 24 tokens or fewer, `hf_ar` takes 1,080 ms and `adaptive` 679
+  ms. `adaptive_no_bypass` is 0.996x [0.989, 1.005] of `adaptive`, which is what
+  two provably identical engines should look like and is a useful read on the
+  measurement floor.
+
+- **Known limitations and blockers:**
+  - Sampled and context-stress cohorts unrun. Context stress is the one that
+    could still change the controller's verdict.
+  - The bypass logic has no real-data exercise and, on this hardware, cannot get
+    one: no request ever made bypass the right call.
+  - Greedy conformance is 71.1-74.2% on natural stop and 61.7-64.1% on primary.
+
+- **Next concrete step:** the context-stress cohort, then confidence-based early
+  stopping inside a block.
+
+- **Teach-back explanation prepared:**
+  - *Decision:* run the natural-stop cohort with the no-bypass ablation, even
+    though the primary run already showed the controller losing.
+  - *Alternative considered:* stop after the primary cohort. The headline was
+    already settled and another 4.4 hours was unlikely to reverse it.
+  - *Failure mode:* it would have left the project's most distinctive feature --
+    sticky bypass -- in the worst possible state: implemented, described as a
+    contribution, and never exercised on real data. A reviewer asking "when does
+    it bypass?" would have got a fake-cost-table answer. Running it converted an
+    untested path into a measured negative result with a mechanism behind it: a
+    14 ms draft prefill against a 50 ms target forward is recovered almost
+    immediately, so bypass is never right here.
+  - *Evidence:* 0 bypasses in 10,704 decisions; `adaptive_no_bypass` 0.996x
+    [0.989, 1.005] of `adaptive`, an interval straddling 1, which is the
+    signature of two engines making identical decisions.
 
 - **Ethan's teach-back status:** not yet demonstrated.
 

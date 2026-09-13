@@ -32,20 +32,42 @@ the target. This is a real gap, not a constraint, and it is the single change
 most likely to close the distance to `hf_dynamic`.
 
 **What would actually test the controller:** a cohort where the best fixed length
-varies per prompt. The context-stress cohort (128 to 3,072 token prompts) and the
-natural-stop cohort are the candidates, because acceptance and the value of draft
-startup both move with prompt length and completion length.
+varies per prompt. Natural stopping has now been run and did not supply it — the
+ordering is unchanged there, `adaptive` 0.988× [0.979, 0.996] against `fixed_8`
+and 0.939× [0.923, 0.955] against `hf_dynamic`. That leaves the context-stress
+cohort, 128 to 3,072 token prompts, where acceptance and the relative cost of a
+draft call both move with prompt length. It is the last condition under which an
+adaptive policy could beat a well-chosen fixed one, and it has not been run.
 
-## 2. The bypass path has never run on real data
+## 2. Bypass is unnecessary on this hardware, and now that is measured
 
-Zero bypasses across 384 adaptive requests. That is the correct decision on a
-cohort this favourable to drafting, and it means the sticky-bypass logic — one of
-the four things SPEC.md calls original about this project — is supported only by
-fake cost tables in `tests/unit/test_controller.py`.
+**Zero bypass decisions out of 10,704**, across both cohorts and 768 adaptive
+requests. The natural-stop cohort was run specifically to give bypass a chance —
+completions there run as short as 17 tokens, and a request that ends after a
+dozen tokens should never recover the draft prefill.
 
-Natural stopping is where it should earn its place: a request that ends after
-twelve tokens never recovers the draft prefill. Until that runs, bypass is
-implemented and tested, not demonstrated.
+It recovered anyway. On this machine the draft prefill costs about **14 ms**
+against a **50 ms** target forward, roughly a quarter of one target call. On
+completions of 24 tokens or fewer, `hf_ar` takes 1,080 ms and `adaptive` 679 ms.
+Speculation won at every completion length measured, and the slowdown fraction
+is 0.0% in both cohorts.
+
+`adaptive_no_bypass` is 0.996× [0.989, 1.005] of `adaptive` — indistinguishable,
+which is exactly what two provably identical engines should look like. That
+0.4% spread is also a useful read on the measurement floor.
+
+So the sticky-bypass action, one of the four things SPEC.md calls original about
+this project, is **implemented, tested against fake cost tables, and measured as
+never correct here**. That is a real negative result rather than an untested
+path, and it is more useful than the feature would have been. What would change
+it: a slower draft model, a faster target, a pair with lower agreement, or a
+workload where the draft is badly matched to the prompt distribution. None of
+those is this machine.
+
+The residual honesty problem is that the *logic* still has no real-data
+exercise. A test that the controller bypasses when it should is a fake-cost-table
+test, and it will stay that way until a configuration exists where bypass is
+right.
 
 ## 3. Three measurement bugs, all found by tooling rather than by tests
 
@@ -102,7 +124,8 @@ a project claiming exactness should measure it before designing a gate around it
 
 ## 6. What was not measured at all
 
-- Natural stopping, sampled decoding, context stress, and the no-bypass ablation.
+- Sampled decoding and context stress. Natural stopping and the no-bypass
+  ablation have now run.
 - Any hardware other than this GB10, any model pair other than Qwen3-4B/0.6B, any
   attention backend other than SDPA, any dtype other than BF16.
 - Batched serving. Every number here is batch size one.
